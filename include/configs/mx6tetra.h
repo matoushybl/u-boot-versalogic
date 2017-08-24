@@ -22,7 +22,7 @@
 
 /* This is for the 4GB Prototype 1 board only. Will change to 2GB for Prod. */
 #if defined(CONFIG_MX6Q)
-#define PHYS_SDRAM_SIZE		(4u * 1024 * 1024 * 1024) // 4u --> 2u for 2GB
+#define PHYS_SDRAM_SIZE		(2u * 1024 * 1024 * 1024) // 4u --> 2u for 2GB
 /* This is for the 1GB Dual boards. */
 #elif defined(CONFIG_MX6D)
 #define PHYS_SDRAM_SIZE		(1u * 1024 * 1024 * 1024)

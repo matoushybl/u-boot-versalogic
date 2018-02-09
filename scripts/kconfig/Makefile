@@ -1,11 +1,8 @@
 # ===========================================================================
 # Kernel configuration targets
 # These targets are used from top-level makefile
-#
-# SPDX-License-Identifier:	GPL-2.0
-#
 
-PHONY += xconfig gconfig menuconfig config silentoldconfig update-po-config \
+PHONY += oldconfig xconfig gconfig menuconfig config silentoldconfig update-po-config \
 	localmodconfig localyesconfig
 
 # Added for U-Boot
@@ -20,31 +17,30 @@ else
 Kconfig := Kconfig
 endif
 
-ifeq ($(quiet),silent_)
-silent := -s
-endif
-
 # We need this, in case the user has it in its environment
 unexport CONFIG_
 
 xconfig: $(obj)/qconf
-	$< $(silent) $(Kconfig)
+	$< $(Kconfig)
 
 gconfig: $(obj)/gconf
-	$< $(silent) $(Kconfig)
+	$< $(Kconfig)
 
 menuconfig: $(obj)/mconf
-	$< $(silent) $(Kconfig)
+	$< $(Kconfig)
 
 config: $(obj)/conf
-	$< $(silent) --oldaskconfig $(Kconfig)
+	$< --oldaskconfig $(Kconfig)
 
 nconfig: $(obj)/nconf
-	$< $(silent) $(Kconfig)
+	$< $(Kconfig)
+
+oldconfig: $(obj)/conf
+	$< --$@ $(Kconfig)
 
 silentoldconfig: $(obj)/conf
 	$(Q)mkdir -p include/config include/generated
-	$< $(silent) --$@ $(Kconfig)
+	$< --$@ $(Kconfig)
 
 localyesconfig localmodconfig: $(obj)/streamline_config.pl $(obj)/conf
 	$(Q)mkdir -p include/config include/generated
@@ -53,18 +49,18 @@ localyesconfig localmodconfig: $(obj)/streamline_config.pl $(obj)/conf
 			cmp -s .tmp.config .config ||			\
 			(mv -f .config .config.old.1;			\
 			 mv -f .tmp.config .config;			\
-			 $(obj)/conf $(silent) --silentoldconfig $(Kconfig); \
+			 $(obj)/conf --silentoldconfig $(Kconfig);	\
 			 mv -f .config.old.1 .config.old)		\
 	else								\
 			mv -f .tmp.config .config;			\
-			$(obj)/conf $(silent) --silentoldconfig $(Kconfig); \
+			$(obj)/conf --silentoldconfig $(Kconfig);	\
 	fi
 	$(Q)rm -f .tmp.config
 
 # Create new linux.pot file
 # Adjust charset to UTF-8 in .po file to accept UTF-8 in Kconfig files
 update-po-config: $(obj)/kxgettext $(obj)/gconf.glade.h
-	$(Q)$(kecho) "  GEN     config.pot"
+	$(Q)echo "  GEN     config.pot"
 	$(Q)xgettext --default-domain=linux                         \
 	    --add-comments --keyword=_ --keyword=N_                 \
 	    --from-code=UTF-8                                       \
@@ -75,62 +71,65 @@ update-po-config: $(obj)/kxgettext $(obj)/gconf.glade.h
 	$(Q)(for i in `ls $(srctree)/arch/*/Kconfig      \
 	    $(srctree)/arch/*/um/Kconfig`;               \
 	    do                                           \
-		$(kecho) "  GEN     $$i";                    \
+		echo "  GEN     $$i";                    \
 		$(obj)/kxgettext $$i                     \
 		     >> $(obj)/config.pot;               \
 	    done )
-	$(Q)$(kecho) "  GEN     linux.pot"
+	$(Q)echo "  GEN     linux.pot"
 	$(Q)msguniq --sort-by-file --to-code=UTF-8 $(obj)/config.pot \
 	    --output $(obj)/linux.pot
 	$(Q)rm -f $(obj)/config.pot
 
-# These targets map 1:1 to the commandline options of 'conf'
-simple-targets := oldconfig allnoconfig allyesconfig allmodconfig \
-	alldefconfig randconfig listnewconfig olddefconfig
-PHONY += $(simple-targets)
+PHONY += allnoconfig allyesconfig allmodconfig alldefconfig randconfig
 
-$(simple-targets): $(obj)/conf
-	$< $(silent) --$@ $(Kconfig)
+allnoconfig allyesconfig allmodconfig alldefconfig randconfig: $(obj)/conf
+	$< --$@ $(Kconfig)
 
-PHONY += oldnoconfig savedefconfig defconfig
+PHONY += listnewconfig olddefconfig oldnoconfig savedefconfig defconfig
+
+listnewconfig olddefconfig: $(obj)/conf
+	$< --$@ $(Kconfig)
 
 # oldnoconfig is an alias of olddefconfig, because people already are dependent
 # on its behavior(sets new symbols to their default value but not 'n') with the
 # counter-intuitive name.
-oldnoconfig: olddefconfig
+oldnoconfig: $(obj)/conf
+	$< --olddefconfig $(Kconfig)
 
 savedefconfig: $(obj)/conf
-	$< $(silent) --$@=defconfig $(Kconfig)
+	$< --$@=defconfig $(Kconfig)
 
 defconfig: $(obj)/conf
 ifeq ($(KBUILD_DEFCONFIG),)
-	$< $(silent) --defconfig $(Kconfig)
+	$< --defconfig $(Kconfig)
 else
-	@$(kecho) "*** Default configuration is based on '$(KBUILD_DEFCONFIG)'"
-	$(Q)$< $(silent) --defconfig=arch/$(SRCARCH)/configs/$(KBUILD_DEFCONFIG) $(Kconfig)
+	@echo "*** Default configuration is based on '$(KBUILD_DEFCONFIG)'"
+	$(Q)$< --defconfig=arch/$(SRCARCH)/configs/$(KBUILD_DEFCONFIG) $(Kconfig)
 endif
 
 %_defconfig: $(obj)/conf
-	$(Q)$< $(silent) --defconfig=arch/$(SRCARCH)/configs/$@ $(Kconfig)
+	$(Q)$< --defconfig=arch/$(SRCARCH)/configs/$@ $(Kconfig)
 
 # Added for U-Boot (backward compatibility)
 %_config: %_defconfig
 	@:
 
-configfiles=$(wildcard $(srctree)/kernel/configs/$@ $(srctree)/arch/$(SRCARCH)/configs/$@)
+configfiles=$(wildcard $(srctree)/kernel/configs/$(1).config $(srctree)/arch/$(SRCARCH)/configs/$(1).config)
 
-%.config: $(obj)/conf
-	$(if $(call configfiles),, $(error No configuration exists for this target on this architecture))
-	$(Q)$(CONFIG_SHELL) $(srctree)/scripts/kconfig/merge_config.sh -m .config $(configfiles)
-	+$(Q)yes "" | $(MAKE) -f $(srctree)/Makefile oldconfig
+define mergeconfig
+$(if $(wildcard $(objtree)/.config),, $(error You need an existing .config for this target))
+$(if $(call configfiles,$(1)),, $(error No configuration exists for this target on this architecture))
+$(Q)$(CONFIG_SHELL) $(srctree)/scripts/kconfig/merge_config.sh -m -O $(objtree) $(objtree)/.config $(call configfiles,$(1))
+$(Q)yes "" | $(MAKE) -f $(srctree)/Makefile oldconfig
+endef
 
 PHONY += kvmconfig
-kvmconfig: kvm_guest.config
-	@:
+kvmconfig:
+	$(call mergeconfig,kvm_guest)
 
 PHONY += tinyconfig
-tinyconfig:
-	$(Q)$(MAKE) -f $(srctree)/Makefile allnoconfig tiny.config
+tinyconfig: allnoconfig
+	$(call mergeconfig,tiny)
 
 # Help text used by make help
 help:
@@ -232,7 +231,7 @@ $(obj)/.tmp_qtcheck: $(src)/Makefile
 
 # QT needs some extra effort...
 $(obj)/.tmp_qtcheck:
-	@set -e; $(kecho) "  CHECK   qt"; dir=""; pkg=""; \
+	@set -e; echo "  CHECK   qt"; dir=""; pkg=""; \
 	if ! pkg-config --exists QtCore 2> /dev/null; then \
 	    echo "* Unable to find the QT4 tool qmake. Trying to use QT3"; \
 	    pkg-config --exists qt 2> /dev/null && pkg=qt; \

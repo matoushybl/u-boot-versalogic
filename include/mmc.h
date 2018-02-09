@@ -11,7 +11,6 @@
 #define _MMC_H_
 
 #include <linux/list.h>
-#include <linux/sizes.h>
 #include <linux/compiler.h>
 #include <part.h>
 
@@ -56,12 +55,13 @@
 #define MMC_MODE_4BIT		(1 << 2)
 #define MMC_MODE_8BIT		(1 << 3)
 #define MMC_MODE_SPI		(1 << 4)
-#define MMC_MODE_DDR_52MHz	(1 << 5)
+#define MMC_MODE_HC		(1 << 5)
+#define MMC_MODE_DDR_52MHz	(1 << 6)
 
 #define SD_DATA_4BIT	0x00040000
 
 #define IS_SD(x)	((x)->version & SD_VERSION_SD)
-#define IS_MMC(x)	((x)->version & MMC_VERSION_MMC)
+#define IS_MMC(x)	((x)->version & SD_VERSION_MMC)
 
 #define MMC_DATA_READ		1
 #define MMC_DATA_WRITE		2
@@ -70,7 +70,8 @@
 #define UNUSABLE_ERR		-17 /* Unusable Card */
 #define COMM_ERR		-18 /* Communications Error */
 #define TIMEOUT			-19
-#define SWITCH_ERR		-20 /* Card reports failure to switch mode */
+#define IN_PROGRESS		-20 /* operation is in progress */
+#define SWITCH_ERR		-21 /* Card reports failure to switch mode */
 
 #define MMC_CMD_GO_IDLE_STATE		0
 #define MMC_CMD_SEND_OP_COND		1
@@ -108,7 +109,6 @@
 #define SD_CMD_SWITCH_UHS18V		11
 
 #define SD_CMD_APP_SET_BUS_WIDTH	6
-#define SD_CMD_APP_SD_STATUS		13
 #define SD_CMD_ERASE_WR_BLK_START	32
 #define SD_CMD_ERASE_WR_BLK_END		33
 #define SD_CMD_APP_SEND_OP_COND		41
@@ -273,28 +273,6 @@
 #define MMC_NUM_BOOT_PARTITION	2
 #define MMC_PART_RPMB           3       /* RPMB partition number */
 
-/* Driver model support */
-
-/**
- * struct mmc_uclass_priv - Holds information about a device used by the uclass
- */
-struct mmc_uclass_priv {
-	struct mmc *mmc;
-};
-
-/**
- * mmc_get_mmc_dev() - get the MMC struct pointer for a device
- *
- * Provided that the device is already probed and ready for use, this value
- * will be available.
- *
- * @dev:	Device
- * @return associated mmc struct pointer if available, else NULL
- */
-struct mmc *mmc_get_mmc_dev(struct udevice *dev);
-
-/* End of driver model support */
-
 struct mmc_cid {
 	unsigned long psn;
 	unsigned short oid;
@@ -344,12 +322,6 @@ struct mmc_config {
 	unsigned char part_type;
 };
 
-struct sd_ssr {
-	unsigned int au;		/* In sectors */
-	unsigned int erase_timeout;	/* In milliseconds */
-	unsigned int erase_offset;	/* In milliseconds */
-};
-
 /* TODO struct mmc should be in mmc_private but it's hard to fix right now */
 struct mmc {
 	struct list_head link;
@@ -372,12 +344,12 @@ struct mmc {
 	u8 part_attr;
 	u8 wr_rel_set;
 	char part_config;
+	char part_num;
 	uint tran_speed;
 	uint read_bl_len;
 	uint write_bl_len;
 	uint erase_grp_size;	/* in 512-byte sectors */
 	uint hc_wp_grp_size;	/* in 512-byte sectors */
-	struct sd_ssr	ssr;	/* SD status register */
 	u64 capacity;
 	u64 capacity_user;
 	u64 capacity_boot;
@@ -389,6 +361,7 @@ struct mmc {
 	char op_cond_pending;	/* 1 if we are waiting on an op_cond command */
 	char init_in_progress;	/* 1 if we have done mmc_start_init() */
 	char preinit;		/* start init as early as possible */
+	uint op_cond_response;	/* the response byte from the last op_cond */
 	int ddr_mode;
 };
 
@@ -488,7 +461,6 @@ void board_mmc_power_init(void);
 int board_mmc_init(bd_t *bis);
 int cpu_mmc_init(bd_t *bis);
 int mmc_get_env_addr(struct mmc *mmc, int copy, u32 *env_addr);
-int mmc_get_env_dev(void);
 
 struct pci_device_id;
 
@@ -498,9 +470,11 @@ struct pci_device_id;
  * This finds all the matching PCI IDs and sets them up as MMC devices.
  *
  * @name:		Name to use for devices
- * @mmc_supported:	PCI IDs to search for, terminated by {0, 0}
+ * @mmc_supported:	PCI IDs to search for
+ * @num_ids:		Number of elements in @mmc_supported
  */
-int pci_mmc_init(const char *name, struct pci_device_id *mmc_supported);
+int pci_mmc_init(const char *name, struct pci_device_id *mmc_supported,
+		 int num_ids);
 
 /* Set block count limit because of 16 bit register limit on some hardware*/
 #ifndef CONFIG_SYS_MMC_MAX_BLK_COUNT

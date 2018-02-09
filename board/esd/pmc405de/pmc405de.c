@@ -6,7 +6,6 @@
  */
 
 #include <common.h>
-#include <console.h>
 #include <libfdt.h>
 #include <fdt_support.h>
 #include <asm/processor.h>

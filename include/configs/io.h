@@ -24,6 +24,7 @@
 #define CONFIG_BOARD_EARLY_INIT_R
 #define CONFIG_MISC_INIT_R
 #define CONFIG_LAST_STAGE_INIT
+#define CONFIG_SYS_GENERIC_BOARD
 
 #define CONFIG_SYS_CLK_FREQ	33333333 /* external frequency to pll   */
 
@@ -34,6 +35,8 @@
 #define PLLMR1_DEFAULT PLLMR1_266_133_66
 
 #undef CONFIG_ZERO_BOOTDELAY_CHECK	/* ignore keypress on bootdelay==0 */
+#define CONFIG_AUTOBOOT_KEYED		/* use key strings to stop autoboot */
+#define CONFIG_AUTOBOOT_STOP_STR " "
 
 /* new uImage format support */
 #define CONFIG_FIT
@@ -67,8 +70,10 @@
 #undef CONFIG_CMD_DHCP
 #undef CONFIG_CMD_DIAG
 #undef CONFIG_CMD_EEPROM
+#undef CONFIG_CMD_ELF
 #undef CONFIG_CMD_I2C
 #undef CONFIG_CMD_IRQ
+#undef CONFIG_CMD_NFS
 
 /*
  * SDRAM configuration (please see cpu/ppc/sdram.[ch])

@@ -459,11 +459,11 @@ static int davinci_eth_open(struct eth_device *dev, bd_t *bis)
 
 	/* Set DMA 8 TX / 8 RX Head pointers to 0 */
 	addr = &adap_emac->TX0HDP;
-	for (cnt = 0; cnt < 8; cnt++)
+	for(cnt = 0; cnt < 16; cnt++)
 		writel(0, addr++);
 
 	addr = &adap_emac->RX0HDP;
-	for (cnt = 0; cnt < 8; cnt++)
+	for(cnt = 0; cnt < 16; cnt++)
 		writel(0, addr++);
 
 	/* Clear Statistics (do this before setting MacControl register) */
@@ -598,8 +598,7 @@ static void davinci_eth_close(struct eth_device *dev)
 	debug_emac("+ emac_close\n");
 
 	davinci_eth_ch_teardown(EMAC_CH_TX);	/* TX Channel teardown */
-	if (readl(&adap_emac->RXCONTROL) & 1)
-		davinci_eth_ch_teardown(EMAC_CH_RX); /* RX Channel teardown */
+	davinci_eth_ch_teardown(EMAC_CH_RX);	/* RX Channel teardown */
 
 	/* Reset EMAC module and disable interrupts in wrapper */
 	writel(1, &adap_emac->SOFTRESET);
@@ -692,10 +691,8 @@ static int davinci_eth_rcv_packet (struct eth_device *dev)
 	davinci_invalidate_rx_descs();
 
 	rx_curr_desc = emac_rx_active_head;
-	if (!rx_curr_desc)
-		return 0;
 	status = rx_curr_desc->pkt_flag_len;
-	if ((status & EMAC_CPPI_OWNERSHIP_BIT) == 0) {
+	if ((rx_curr_desc) && ((status & EMAC_CPPI_OWNERSHIP_BIT) == 0)) {
 		if (status & EMAC_CPPI_RX_ERROR_FRAME) {
 			/* Error in packet - discard it and requeue desc */
 			printf ("WARN: emac_rcv_pkt: Error in packet\n");
@@ -703,9 +700,8 @@ static int davinci_eth_rcv_packet (struct eth_device *dev)
 			unsigned long tmp = (unsigned long)rx_curr_desc->buffer;
 
 			invalidate_dcache_range(tmp, tmp + EMAC_RXBUF_SIZE);
-			net_process_received_packet(
-				rx_curr_desc->buffer,
-				rx_curr_desc->buff_off_len & 0xffff);
+			NetReceive (rx_curr_desc->buffer,
+				    (rx_curr_desc->buff_off_len & 0xffff));
 			ret = rx_curr_desc->buff_off_len & 0xffff;
 		}
 
@@ -779,7 +775,7 @@ int davinci_emac_initialize(void)
 		return -1;
 
 	memset(dev, 0, sizeof *dev);
-	strcpy(dev->name, "DaVinci-EMAC");
+	sprintf(dev->name, "DaVinci-EMAC");
 
 	dev->iobase = 0;
 	dev->init = davinci_eth_open;

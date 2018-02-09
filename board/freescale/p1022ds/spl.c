@@ -5,7 +5,6 @@
  */
 
 #include <common.h>
-#include <console.h>
 #include <ns16550.h>
 #include <malloc.h>
 #include <mmc.h>

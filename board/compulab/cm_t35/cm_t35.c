@@ -64,7 +64,6 @@ struct splash_location splash_locations[] = {
 	{
 		.name = "nand",
 		.storage = SPLASH_STORAGE_NAND,
-		.flags = SPLASH_STORAGE_RAW,
 		.offset = 0x100000,
 	},
 };
@@ -105,13 +104,13 @@ int board_init(void)
  */
 u32 get_board_rev(void)
 {
-	return cl_eeprom_get_board_rev(CONFIG_SYS_I2C_EEPROM_BUS);
+	return cl_eeprom_get_board_rev();
 };
 
 int misc_init_r(void)
 {
 	cl_print_pcb_info();
-	omap_die_id_display();
+	dieid_num_r();
 
 	return 0;
 }
@@ -442,7 +441,7 @@ static int handle_mac_address(void)
 	if (rc)
 		return rc;
 
-	if (!is_valid_ethaddr(enetaddr))
+	if (!is_valid_ether_addr(enetaddr))
 		return -1;
 
 	return eth_setenv_enetaddr("ethaddr", enetaddr);

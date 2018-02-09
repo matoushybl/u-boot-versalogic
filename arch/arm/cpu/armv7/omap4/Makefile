@@ -5,7 +5,6 @@
 # SPDX-License-Identifier:	GPL-2.0+
 #
 
-obj-y	+= boot.o
 obj-y	+= sdram_elpida.o
 obj-y	+= hwinit.o
 obj-y	+= emif.o

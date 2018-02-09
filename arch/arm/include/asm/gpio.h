@@ -1,4 +1,2 @@
-#ifndef CONFIG_ARCH_UNIPHIER
-#include <asm/arch/gpio.h>
-#endif
+#include <asm/arch-mx6/gpio.h>
 #include <asm-generic/gpio.h>

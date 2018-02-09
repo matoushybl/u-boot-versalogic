@@ -10,7 +10,6 @@
 
 #include <config.h>
 #include <common.h>
-#include <memalign.h>
 #include <mmc.h>
 #include <u-boot/sha256.h>
 #include "mmc_private.h"

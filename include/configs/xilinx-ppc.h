@@ -1,6 +1,6 @@
 /*
  * (C) Copyright 2008
- *  Ricado Ribalda-Universidad Autonoma de Madrid-ricardo.ribalda@gmail.com
+ *  Ricado Ribalda-Universidad Autonoma de Madrid-ricardo.ribalda@uam.es
  *  This work has been supported by: QTechnology  http://qtec.com/
  *
  *  (C) Copyright 2008
@@ -11,8 +11,6 @@
 
 #ifndef __CONFIG_XLX_H
 #define __CONFIG_XLX_H
-
-
 /*
 #define DEBUG
 #define ET_DEBUG
@@ -25,9 +23,11 @@
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + 128 * 1024)
 
 /*Cmd*/
+#include <config_cmd_default.h>
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_DIAG
+#define CONFIG_CMD_ELF
 #define CONFIG_CMD_IRQ
 #define CONFIG_CMD_REGINFO
 #undef CONFIG_CMD_JFFS2
@@ -35,9 +35,12 @@
 #undef CONFIG_CMD_SPI
 #undef CONFIG_CMD_I2C
 #undef CONFIG_CMD_DTT
+#undef CONFIG_CMD_NET
 #undef CONFIG_CMD_PING
 #undef CONFIG_CMD_DHCP
 #undef CONFIG_CMD_EEPROM
+#undef CONFIG_CMD_IMLS
+#undef CONFIG_CMD_NFS
 
 /*Misc*/
 #define CONFIG_BOOTDELAY		5/* autoboot after 5 seconds     */
@@ -101,10 +104,23 @@
 #define CONFIG_SYS_NO_FLASH
 #endif
 
-#define CONFIG_OF_LIBFDT       1
+/* serial communication */
+#ifdef XPAR_UARTLITE_0_BASEADDR
+#define CONFIG_XILINX_UARTLITE
+#define XILINX_UARTLITE_BASEADDR	XPAR_UARTLITE_0_BASEADDR
+#define CONFIG_BAUDRATE			XPAR_UARTLITE_0_BAUDRATE
+#define CONFIG_SYS_BAUDRATE_TABLE	{ CONFIG_BAUDRATE }
+#else
+#ifdef XPAR_UARTNS550_0_BASEADDR
+#define CONFIG_SYS_NS16550
+#define CONFIG_SYS_NS16550_SERIAL
+#define CONFIG_SYS_NS16550_REG_SIZE	4
+#define CONFIG_CONS_INDEX		1
+#define CONFIG_SYS_NS16550_COM1		XPAR_UARTNS550_0_BASEADDR
+#define CONFIG_SYS_NS16550_CLK		XPAR_UARTNS550_0_CLOCK_FREQ_HZ
 #define CONFIG_BAUDRATE			115200
-/* The following table includes the supported baudrates */
-# define CONFIG_SYS_BAUDRATE_TABLE \
-	{300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400}
+#define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 115200 }
+#endif
+#endif
 
 #endif						/* __CONFIG_H */

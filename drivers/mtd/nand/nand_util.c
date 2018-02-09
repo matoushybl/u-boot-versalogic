@@ -23,7 +23,6 @@
 #include <command.h>
 #include <watchdog.h>
 #include <malloc.h>
-#include <memalign.h>
 #include <div64.h>
 
 #include <asm/errno.h>
@@ -484,7 +483,7 @@ int nand_verify_page_oob(nand_info_t *nand, struct mtd_oob_ops *ops, loff_t ofs)
 
 	memcpy(&vops, ops, sizeof(vops));
 
-	vops.datbuf = memalign(ARCH_DMA_MINALIGN, verlen);
+	vops.datbuf = malloc(verlen);
 
 	if (!vops.datbuf)
 		return -ENOMEM;
@@ -521,7 +520,7 @@ int nand_verify(nand_info_t *nand, loff_t ofs, size_t len, u_char *buf)
 	int rval = 0;
 	size_t verofs;
 	size_t verlen = nand->writesize;
-	uint8_t *verbuf = memalign(ARCH_DMA_MINALIGN, verlen);
+	uint8_t *verbuf = malloc(verlen);
 
 	if (!verbuf)
 		return -ENOMEM;
@@ -840,7 +839,7 @@ int nand_torture(nand_info_t *nand, loff_t offset)
 
 	patt_count = ARRAY_SIZE(patterns);
 
-	buf = malloc_cache_aligned(nand->erasesize);
+	buf = malloc(nand->erasesize);
 	if (buf == NULL) {
 		puts("Out of memory for erase block buffer\n");
 		return -ENOMEM;

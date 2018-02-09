@@ -15,7 +15,6 @@
 #include <asm/msr-index.h>
 #include <asm/mtrr.h>
 #include <asm/post.h>
-#include <asm/processor.h>
 #include <asm/processor-flags.h>
 #include <asm/arch/microcode.h>
 
@@ -188,7 +187,7 @@ car_uninit:
 	wrmsr
 
 	/* Disable the no-eviction run state */
-	movl    $NOEVICTMOD_MSR, %ecx
+	movl    NOEVICTMOD_MSR, %ecx
 	rdmsr
 	andl    $~2, %eax
 	wrmsr

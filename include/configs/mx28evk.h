@@ -17,6 +17,7 @@
 
 /* U-Boot Commands */
 #define CONFIG_SYS_NO_FLASH
+#include <config_cmd_default.h>
 #define CONFIG_DISPLAY_CPUINFO
 #define CONFIG_DOS_PARTITION
 
@@ -24,9 +25,14 @@
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_FAT
+#define CONFIG_CMD_GPIO
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_MMC
+#define CONFIG_CMD_NET
+#define CONFIG_CMD_NFS
 #define CONFIG_CMD_PING
+#define CONFIG_CMD_SAVEENV
+#define CONFIG_CMD_SETEXPR
 #define CONFIG_CMD_SF
 #define CONFIG_CMD_SPI
 #define CONFIG_CMD_USB
@@ -101,6 +107,7 @@
 /* FEC Ethernet on SoC */
 #ifdef	CONFIG_CMD_NET
 #define CONFIG_FEC_MXC
+#define CONFIG_NET_MULTI
 #define CONFIG_MX28_FEC_MAC_IN_OCOTP
 #endif
 
@@ -126,9 +133,11 @@
 
 /* SPI Flash */
 #ifdef CONFIG_CMD_SF
+#define CONFIG_SPI_FLASH
 #define CONFIG_SF_DEFAULT_BUS		2
 #define CONFIG_SF_DEFAULT_CS		0
 /* this may vary and depends on the installed chip */
+#define CONFIG_SPI_FLASH_SST
 #define CONFIG_SF_DEFAULT_MODE		SPI_MODE_0
 #define CONFIG_SF_DEFAULT_SPEED		24000000
 #endif

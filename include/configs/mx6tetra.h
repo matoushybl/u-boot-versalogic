@@ -8,6 +8,8 @@
 
 #ifndef __MX6QTETRA_CONFIG_H
 #define __MX6QTETRA_CONFIG_H
+#include <asm/arch-mx6/imx-regs.h>
+#include <asm/imx-common/gpio.h>
 
 #ifdef CONFIG_SPL
 #define CONFIG_SPL_LIBCOMMON_SUPPORT
@@ -22,6 +24,7 @@
 
 /* This is for the 4GB Prototype 1 board only. Will change to 2GB for Prod. */
 #if defined(CONFIG_MX6Q)
+#define CONFIG_DEFAULT_FDT_FILE	"imx6q-tetra.dtb"
 #define PHYS_SDRAM_SIZE		(2u * 1024 * 1024 * 1024) // 4u --> 2u for 2GB
 /* This is for the 1GB Dual boards. */
 #elif defined(CONFIG_MX6D)
@@ -65,6 +68,10 @@
 #define CONFIG_PCIE_IMX_PERST_GPIO	IMX_GPIO_NR(7, 12)
 #define CONFIG_PCIE_IMX_POWER_GPIO	IMX_GPIO_NR(3, 19)
 #endif
+#define CONFIG_POWER
+#define CONFIG_POWER_I2C
+#define CONFIG_POWER_PFUZE100
+#define CONFIG_POWER_PFUZE100_I2C_ADDR	0x08
 
 /* USB Configs */
 #define CONFIG_CMD_USB

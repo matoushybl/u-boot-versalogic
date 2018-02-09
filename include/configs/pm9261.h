@@ -20,6 +20,7 @@
 #include <asm/hardware.h>
 /* ARM asynchronous clock */
 
+#define CONFIG_SYS_GENERIC_BOARD
 
 #define CONFIG_DISPLAY_BOARDINFO
 
@@ -182,6 +183,13 @@
 /*
  * Command line configuration.
  */
+#include <config_cmd_default.h>
+#undef CONFIG_CMD_BDI
+#undef CONFIG_CMD_IMI
+#undef CONFIG_CMD_FPGA
+#undef CONFIG_CMD_LOADS
+#undef CONFIG_CMD_IMLS
+
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_PING		1
 #define CONFIG_CMD_DHCP		1
@@ -335,6 +343,7 @@
 
 #define CONFIG_BAUDRATE			115200
 
+#define CONFIG_SYS_PROMPT		"pm9261> "
 #define CONFIG_SYS_CBSIZE		256
 #define CONFIG_SYS_MAXARGS		16
 #define CONFIG_SYS_PBSIZE		\

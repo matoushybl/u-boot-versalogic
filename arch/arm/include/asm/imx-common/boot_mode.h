@@ -1,7 +1,5 @@
 /*
- * Copyright (C) 2012 Boundary Devices Inc.
- *
- * Copyright (C) 2015-2016 Freescale Semiconductor, Inc.
+ * Copyright (C) 2012-2015 Boundary Devices Inc.
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */

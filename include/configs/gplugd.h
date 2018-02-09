@@ -26,6 +26,11 @@
 #endif
 
 /*
+ * Generic board support
+ */
+#define CONFIG_SYS_GENERIC_BOARD
+
+/*
  * Version number information
  */
 #define CONFIG_IDENT_STRING	"\nMarvell-gplugD"
@@ -52,7 +57,9 @@
  * Commands configuration
  */
 #define CONFIG_SYS_NO_FLASH		/* Declare no flash (NOR/SPI) */
+#include <config_cmd_default.h>
 #define CONFIG_CMD_I2C
+#undef CONFIG_CMD_FPGA
 #define CONFIG_CMD_USB
 #define CONFIG_CMD_EXT2
 #define CONFIG_CMD_FAT
@@ -91,6 +98,7 @@
 
 /* Flash Support */
 #define CONFIG_CMD_SF
+#define CONFIG_SPI_FLASH_ATMEL
 
 /*
  * mv-common.h should be defined after CMD configs since it used them
@@ -114,6 +122,8 @@
 #define CONFIG_ENV_OFFSET		0x07C000
 
 #define CONFIG_CMD_ASKENV
+#define CONFIG_CMD_EDITENV
+#define CONFIG_CMD_SAVEENV
 
 #ifdef CONFIG_CMD_USB
 #define CONFIG_USB_EHCI

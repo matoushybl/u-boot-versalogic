@@ -20,6 +20,7 @@
 #undef CONFIG_CMD_SNTP
 #undef CONFIG_CMD_TFTPPUT
 #undef CONFIG_CMD_TFTPSRV
+#undef CONFIG_OF_CONTROL
 
 #ifndef CONFIG_SPL_DM
 #undef CONFIG_DM_SERIAL
@@ -29,6 +30,7 @@
 #endif
 
 #undef CONFIG_DM_WARN
+#undef CONFIG_DM_DEVICE_REMOVE
 #undef CONFIG_DM_STDIO
 
 #endif /* CONFIG_SPL_BUILD */

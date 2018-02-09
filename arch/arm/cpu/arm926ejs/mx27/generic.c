@@ -12,7 +12,6 @@
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/gpio.h>
-#include <asm/imx-common/sys_proto.h>
 #ifdef CONFIG_MXC_MMC
 #include <asm/arch/mxcmmc.h>
 #endif
@@ -159,11 +158,6 @@ unsigned int mxc_get_clock(enum mxc_clock clk)
 	return -1;
 }
 
-
-u32 get_cpu_rev(void)
-{
-	return MXC_CPU_MX27 << 12;
-}
 
 #if defined(CONFIG_DISPLAY_CPUINFO)
 int print_cpuinfo (void)

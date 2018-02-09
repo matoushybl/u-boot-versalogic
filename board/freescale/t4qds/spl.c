@@ -4,7 +4,6 @@
  */
 
 #include <common.h>
-#include <console.h>
 #include <asm/spl.h>
 #include <malloc.h>
 #include <ns16550.h>

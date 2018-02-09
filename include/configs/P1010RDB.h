@@ -14,6 +14,7 @@
 #ifdef CONFIG_36BIT
 #define CONFIG_PHYS_64BIT
 #endif
+#define	CONFIG_SYS_GENERIC_BOARD
 #define	CONFIG_DISPLAY_BOARDINFO
 
 #define CONFIG_P1010
@@ -183,8 +184,10 @@
 #define CONFIG_FSL_PCIE_RESET		/* need PCIe reset errata */
 #define CONFIG_SYS_PCI_64BIT		/* enable 64-bit PCI resources */
 
+#define CONFIG_CMD_NET
 #define CONFIG_CMD_PCI
 
+#define CONFIG_E1000			/*  E1000 pci Ethernet card*/
 
 /*
  * PCI Windows
@@ -604,6 +607,7 @@ extern unsigned long get_sdram_size(void);
 /* Serial Port */
 #define CONFIG_CONS_INDEX	1
 #undef	CONFIG_SERIAL_SOFTWARE_FIFO
+#define CONFIG_SYS_NS16550
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
 #define CONFIG_SYS_NS16550_CLK		get_bus_freq(0)
@@ -659,6 +663,7 @@ extern unsigned long get_sdram_size(void);
 #endif
 /* enable read and write access to EEPROM */
 #define CONFIG_CMD_EEPROM
+#define CONFIG_SYS_I2C_MULTI_EEPROMS
 #define CONFIG_SYS_I2C_EEPROM_ADDR_LEN 1
 #define CONFIG_SYS_EEPROM_PAGE_WRITE_BITS 3
 #define CONFIG_SYS_EEPROM_PAGE_WRITE_DELAY_MS 5
@@ -675,6 +680,9 @@ extern unsigned long get_sdram_size(void);
  */
 #if !defined(CONFIG_NAND) || !defined(CONFIG_NAND_SECBOOT)
 /* eSPI - Enhanced SPI */
+#define CONFIG_FSL_ESPI
+#define CONFIG_SPI_FLASH
+#define CONFIG_SPI_FLASH_SPANSION
 #define CONFIG_CMD_SF
 #define CONFIG_SF_DEFAULT_SPEED		10000000
 #define CONFIG_SF_DEFAULT_MODE		SPI_MODE_0
@@ -806,11 +814,15 @@ extern unsigned long get_sdram_size(void);
 /*
  * Command line configuration.
  */
+#include <config_cmd_default.h>
+
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_ERRATA
+#define CONFIG_CMD_ELF
 #define CONFIG_CMD_IRQ
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_PING
+#define CONFIG_CMD_SETEXPR
 #define CONFIG_CMD_REGINFO
 
 #undef CONFIG_WATCHDOG			/* watchdog disabled */
@@ -951,5 +963,9 @@ extern unsigned long get_sdram_size(void);
 #define CONFIG_BOOTCOMMAND CONFIG_RAMBOOTCOMMAND
 
 #include <asm/fsl_secure_boot.h>
+
+#ifdef CONFIG_SECURE_BOOT
+#define CONFIG_CMD_BLOB
+#endif
 
 #endif	/* __CONFIG_H */

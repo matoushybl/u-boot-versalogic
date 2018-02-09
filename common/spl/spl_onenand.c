@@ -14,7 +14,7 @@
 #include <asm/io.h>
 #include <onenand_uboot.h>
 
-int spl_onenand_load_image(void)
+void spl_onenand_load_image(void)
 {
 	struct image_header *header;
 
@@ -28,6 +28,4 @@ int spl_onenand_load_image(void)
 	spl_parse_image_header(header);
 	onenand_spl_load_image(CONFIG_SYS_ONENAND_U_BOOT_OFFS,
 		spl_image.size, (void *)spl_image.load_addr);
-
-	return 0;
 }

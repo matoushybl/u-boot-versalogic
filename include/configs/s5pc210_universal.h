@@ -12,6 +12,9 @@
 
 #include <configs/exynos4-common.h>
 
+#define CONFIG_SYS_PROMPT	"Universal # "	/* Monitor Command Prompt */
+
+
 #define CONFIG_TIZEN			/* TIZEN lib */
 
 /* Keep L2 Cache Disabled */
@@ -177,8 +180,8 @@
 #define CONFIG_POWER_MAX8998
 
 #define CONFIG_USB_GADGET
-#define CONFIG_USB_GADGET_DWC2_OTG
-#define CONFIG_USB_GADGET_DWC2_OTG_PHY
+#define CONFIG_USB_GADGET_S3C_UDC_OTG
+#define CONFIG_USB_GADGET_S3C_UDC_OTG_PHY
 #define CONFIG_USB_GADGET_DUALSPEED
 
 /*

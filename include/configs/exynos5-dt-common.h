@@ -16,23 +16,12 @@
 		"stdout=serial,lcd\0" \
 		"stderr=serial,lcd\0"
 
-#define CONFIG_EXYNOS5_DT
+#include "exynos5-common.h"
 
-#define CONFIG_ENV_IS_IN_SPI_FLASH
-#define CONFIG_ENV_SPI_BASE	0x12D30000
-#define FLASH_SIZE		(4 << 20)
-#define CONFIG_ENV_OFFSET	(FLASH_SIZE - CONFIG_ENV_SECT_SIZE)
-#define CONFIG_SPI_BOOTING
-
-#define CONFIG_BOARD_COMMON
-
-/* Display */
-#define CONFIG_LCD
-#ifdef CONFIG_LCD
-#define CONFIG_EXYNOS_FB
-#define CONFIG_EXYNOS_DP
-#define LCD_BPP			LCD_COLOR16
-#endif
+/* PMIC */
+#define CONFIG_POWER
+#define CONFIG_POWER_I2C
+#define CONFIG_POWER_TPS65090
 
 /* Enable keyboard */
 #define CONFIG_KEYBOARD

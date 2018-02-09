@@ -1,10 +1,11 @@
 /*
- * Copyright (C) 2015 Masahiro Yamada <yamada.masahiro@socionext.com>
+ * Copyright (C) 2015 Panasonic Corporation
+ *   Author: Masahiro Yamada <yamada.m@jp.panasonic.com>
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
-#include "micro-support-card.h"
+#include <mach/board.h>
 
 int misc_init_f(void)
 {

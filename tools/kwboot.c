@@ -9,14 +9,10 @@
  *   2008. Chapter 24.2 "BootROM Firmware".
  */
 
-#include "kwbimage.h"
-#include "mkimage.h"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
-#include <image.h>
 #include <libgen.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -25,6 +21,8 @@
 #include <termios.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+
+#include "kwbimage.h"
 
 #ifdef __GNUC__
 #define PACKED __attribute((packed))
@@ -616,10 +614,9 @@ static int
 kwboot_img_patch_hdr(void *img, size_t size)
 {
 	int rc;
-	struct main_hdr_v1 *hdr;
+	bhr_t *hdr;
 	uint8_t csum;
-	size_t hdrsz = sizeof(*hdr);
-	int image_ver;
+	const size_t hdrsz = sizeof(*hdr);
 
 	rc = -1;
 	hdr = img;
@@ -629,20 +626,8 @@ kwboot_img_patch_hdr(void *img, size_t size)
 		goto out;
 	}
 
-	image_ver = image_version(img);
-	if (image_ver < 0) {
-		fprintf(stderr, "Invalid image header version\n");
-		errno = EINVAL;
-		goto out;
-	}
-
-	if (image_ver == 0)
-		hdrsz = sizeof(*hdr);
-	else
-		hdrsz = KWBHEADER_V1_SIZE(hdr);
-
-	csum = kwboot_img_csum8(hdr, hdrsz) - hdr->checksum;
-	if (csum != hdr->checksum) {
+	csum = kwboot_img_csum8(hdr, hdrsz) - hdr->checkSum;
+	if (csum != hdr->checkSum) {
 		errno = EINVAL;
 		goto out;
 	}
@@ -654,26 +639,14 @@ kwboot_img_patch_hdr(void *img, size_t size)
 
 	hdr->blockid = IBR_HDR_UART_ID;
 
-	/*
-	 * Subtract mkimage header size from destination address
-	 * as this header is not expected by the Marvell BootROM.
-	 * This way, the execution address is identical to the
-	 * one the image is compiled for (TEXT_BASE).
-	 */
-	hdr->destaddr = hdr->destaddr - sizeof(struct image_header);
+	hdr->nandeccmode = IBR_HDR_ECC_DISABLED;
+	hdr->nandpagesize = 0;
 
-	if (image_ver == 0) {
-		struct main_hdr_v0 *hdr_v0 = img;
+	hdr->srcaddr = hdr->ext
+		? sizeof(struct kwb_header)
+		: sizeof(*hdr);
 
-		hdr_v0->nandeccmode = IBR_HDR_ECC_DISABLED;
-		hdr_v0->nandpagesize = 0;
-
-		hdr_v0->srcaddr = hdr_v0->ext
-			? sizeof(struct kwb_header)
-			: sizeof(*hdr_v0);
-	}
-
-	hdr->checksum = kwboot_img_csum8(hdr, hdrsz) - csum;
+	hdr->checkSum = kwboot_img_csum8(hdr, hdrsz) - csum;
 
 	rc = 0;
 out:
@@ -684,7 +657,7 @@ static void
 kwboot_usage(FILE *stream, char *progname)
 {
 	fprintf(stream,
-		"Usage: %s [-d | -a | -q <req-delay> | -s <resp-timeo> | -b <image> | -D <image> ] [ -t ] [-B <baud> ] <TTY>\n",
+		"Usage: %s [-d | -a | -b <image> | -D <image> ] [ -t ] [-B <baud> ] <TTY>\n",
 		progname);
 	fprintf(stream, "\n");
 	fprintf(stream,
@@ -694,8 +667,6 @@ kwboot_usage(FILE *stream, char *progname)
 		"  -D <image>: boot <image> without preamble (Dove)\n");
 	fprintf(stream, "  -d: enter debug mode\n");
 	fprintf(stream, "  -a: use timings for Armada XP\n");
-	fprintf(stream, "  -q <req-delay>:  use specific request-delay\n");
-	fprintf(stream, "  -s <resp-timeo>: use specific response-timeout\n");
 	fprintf(stream, "\n");
 	fprintf(stream, "  -t: mini terminal\n");
 	fprintf(stream, "\n");
@@ -728,7 +699,7 @@ main(int argc, char **argv)
 	kwboot_verbose = isatty(STDOUT_FILENO);
 
 	do {
-		int c = getopt(argc, argv, "hb:ptaB:dD:q:s:");
+		int c = getopt(argc, argv, "hb:ptaB:dD:");
 		if (c < 0)
 			break;
 
@@ -758,14 +729,6 @@ main(int argc, char **argv)
 		case 'a':
 			msg_req_delay = KWBOOT_MSG_REQ_DELAY_AXP;
 			msg_rsp_timeo = KWBOOT_MSG_RSP_TIMEO_AXP;
-			break;
-
-		case 'q':
-			msg_req_delay = atoi(optarg);
-			break;
-
-		case 's':
-			msg_rsp_timeo = atoi(optarg);
 			break;
 
 		case 'B':

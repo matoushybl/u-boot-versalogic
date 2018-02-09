@@ -1,13 +1,13 @@
 /*
- * Copyright (C) 2012-2015 Masahiro Yamada <yamada.masahiro@socionext.com>
+ * Copyright (C) 2012-2014 Panasonic Corporation
+ *   Author: Masahiro Yamada <yamada.m@jp.panasonic.com>
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
-#include <linux/io.h>
-
-#include "sc-regs.h"
+#include <asm/io.h>
+#include <mach/sc-regs.h>
 
 void reset_cpu(unsigned long ignored)
 {

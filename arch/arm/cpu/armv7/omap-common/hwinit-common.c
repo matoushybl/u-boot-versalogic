@@ -90,9 +90,7 @@ void __weak srcomp_enable(void)
  */
 int arch_cpu_init(void)
 {
-#ifdef CONFIG_SPL
 	save_omap_boot_params();
-#endif
 	return 0;
 }
 #endif /* CONFIG_ARCH_CPU_INIT */

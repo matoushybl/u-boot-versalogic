@@ -13,8 +13,6 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#define CONFIG_SYS_CACHELINE_SIZE	64
-
 /*
  * High Level Configuration Options
  */
@@ -22,6 +20,7 @@
 
 #define CONFIG_OMAP_GPIO
 #define CONFIG_OMAP_COMMON
+#define CONFIG_SYS_GENERIC_BOARD
 /* Common ARM Erratas */
 #define CONFIG_ARM_ERRATA_454179
 #define CONFIG_ARM_ERRATA_430973
@@ -68,6 +67,7 @@
  */
 #define V_NS16550_CLK			48000000	/* 48MHz (APLL96/2) */
 
+#define CONFIG_SYS_NS16550
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	(-4)
 #define CONFIG_SYS_NS16550_CLK		V_NS16550_CLK
@@ -94,6 +94,8 @@
 #define CONFIG_OMAP3_GPIO_6		/* GPIO160..191 is in GPIO bank 6 */
 
 /* commands to include */
+#include <config_cmd_default.h>
+
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_EXT2		/* EXT2 Support			*/
 #define CONFIG_CMD_FAT		/* FAT support			*/
@@ -109,6 +111,11 @@
 #define CONFIG_CMD_NAND		/* NAND support			*/
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_PING
+
+#undef CONFIG_CMD_FLASH		/* flinfo, erase, protect	*/
+#undef CONFIG_CMD_FPGA		/* FPGA configuration Support	*/
+#undef CONFIG_CMD_IMI		/* iminfo			*/
+#undef CONFIG_CMD_IMLS		/* List all found images	*/
 
 #define CONFIG_SYS_NO_FLASH
 #define CONFIG_SYS_I2C
@@ -126,6 +133,7 @@
 /*
  * Board NAND Info.
  */
+#define CONFIG_SYS_NAND_QUIET_TEST
 #define CONFIG_NAND_OMAP_GPMC
 #define CONFIG_SYS_NAND_ADDR		NAND_BASE	/* physical address */
 							/* to access nand */
@@ -135,7 +143,7 @@
 
 #define CONFIG_SYS_MAX_NAND_DEVICE	1		/* Max number of NAND */
 							/* devices */
-#define CONFIG_SYS_NAND_BUSWIDTH_16BIT
+#define CONFIG_SYS_NAND_BUSWIDTH_16BIT	16
 /* Environment information */
 #define CONFIG_BOOTDELAY		3
 
@@ -195,6 +203,7 @@
  */
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
 #define CONFIG_SYS_HUSH_PARSER		/* use "hush" command parser */
+#define CONFIG_SYS_PROMPT		"TAO-3530 # "
 #define CONFIG_SYS_CBSIZE		256	/* Console I/O Buffer Size */
 
 /* turn on command-line edit/hist/auto */

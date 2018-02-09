@@ -11,7 +11,6 @@
  */
 
 #include <common.h>
-#include <dm.h>
 #include <miiphy.h>
 #include <phy.h>
 

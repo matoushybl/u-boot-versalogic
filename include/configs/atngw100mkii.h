@@ -16,6 +16,7 @@
 #define CONFIG_AT32AP7000
 #define CONFIG_ATNGW100MKII
 
+#define CONFIG_SYS_GENERIC_BOARD
 #define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_BOARD_EARLY_INIT_R
 
@@ -81,7 +82,17 @@
 #define CONFIG_BOOTCOMMAND						\
 	"fsload 0x10400000 /uImage; bootm"
 
+/*
+ * Only interrupt autoboot if <space> is pressed. Otherwise, garbage
+ * data on the serial line may interrupt the boot sequence.
+ */
 #define CONFIG_BOOTDELAY		1
+#define CONFIG_AUTOBOOT
+#define CONFIG_AUTOBOOT_KEYED
+#define CONFIG_AUTOBOOT_PROMPT		\
+	"Press SPACE to abort autoboot in %d seconds\n", bootdelay
+#define CONFIG_AUTOBOOT_DELAY_STR	"d"
+#define CONFIG_AUTOBOOT_STOP_STR	" "
 
 /*
  * After booting the board for the first time, new ethernet addresses
@@ -89,6 +100,7 @@
  * "ethaddr" and "eth1addr". This is normally done during production.
  */
 #define CONFIG_OVERWRITE_ETHADDR_ONCE
+#define CONFIG_NET_MULTI
 
 /*
  * BOOTP/DHCP options
@@ -99,6 +111,8 @@
 /*
  * Command line configuration.
  */
+#include <config_cmd_default.h>
+
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_EXT2
@@ -109,6 +123,9 @@
 #define CONFIG_CMD_SPI
 #define CONFIG_CMD_MII
 
+#undef CONFIG_CMD_FPGA
+#undef CONFIG_CMD_SETGETDCR
+#undef CONFIG_CMD_XIMG
 
 #define CONFIG_ATMEL_USART
 #define CONFIG_MACB
@@ -120,6 +137,8 @@
 #define CONFIG_GENERIC_MMC
 #define CONFIG_ATMEL_SPI
 
+#define CONFIG_SPI_FLASH
+#define CONFIG_SPI_FLASH_ATMEL
 
 #define CONFIG_SYS_DCACHE_LINESZ	32
 #define CONFIG_SYS_ICACHE_LINESZ	32
@@ -155,6 +174,7 @@
 #define CONFIG_SYS_BOOTPARAMS_LEN	(16 * 1024)
 
 /* Other configuration settings that shouldn't have to change all that often */
+#define CONFIG_SYS_PROMPT		"U-Boot> "
 #define CONFIG_SYS_CBSIZE		256
 #define CONFIG_SYS_MAXARGS		16
 #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)

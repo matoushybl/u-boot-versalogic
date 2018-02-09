@@ -4,14 +4,12 @@
  * (C) Copyright 2008 Armadeus Systems nc
  * (C) Copyright 2007 Pengutronix, Sascha Hauer <s.hauer@pengutronix.de>
  * (C) Copyright 2007 Pengutronix, Juergen Beisert <j.beisert@pengutronix.de>
- * Copyright (C) 2016 Freescale Semiconductor, Inc.
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 #include <malloc.h>
-#include <memalign.h>
 #include <net.h>
 #include <netdev.h>
 #include <miiphy.h>
@@ -19,7 +17,6 @@
 
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
-#include <asm/imx-common/sys_proto.h>
 #include <asm/io.h>
 #include <asm/errno.h>
 #include <linux/compiler.h>
@@ -70,6 +67,13 @@ DECLARE_GLOBAL_DATA_PTR;
 #endif
 
 #undef DEBUG
+
+struct nbuf {
+	uint8_t data[1500];	/**< actual data */
+	int length;		/**< actual length */
+	int used;		/**< buffer in use or not */
+	uint8_t head[16];	/**< MAC header(6 + 6 + 2) + 2(aligned) */
+};
 
 #ifdef CONFIG_FEC_MXC_SWAP_PACKET
 static void swap_packet(uint32_t *packet, int length)
@@ -133,25 +137,15 @@ static void fec_mii_setspeed(struct ethernet_regs *eth)
 	/*
 	 * Set MII_SPEED = (1/(mii_speed * 2)) * System Clock
 	 * and do not drop the Preamble.
-	 *
-	 * The i.MX28 and i.MX6 types have another field in the MSCR (aka
-	 * MII_SPEED) register that defines the MDIO output hold time. Earlier
-	 * versions are RAZ there, so just ignore the difference and write the
-	 * register always.
-	 * The minimal hold time according to IEE802.3 (clause 22) is 10 ns.
-	 * HOLDTIME + 1 is the number of clk cycles the fec is holding the
-	 * output.
-	 * The HOLDTIME bitfield takes values between 0 and 7 (inclusive).
-	 * Given that ceil(clkrate / 5000000) <= 64, the calculation for
-	 * holdtime cannot result in a value greater than 3.
 	 */
-	u32 pclk = imx_get_fecclk();
-	u32 speed = DIV_ROUND_UP(pclk, 5000000);
-	u32 hold = DIV_ROUND_UP(pclk, 100000000) - 1;
+	register u32 speed = DIV_ROUND_UP(imx_get_fecclk(), 5000000);
+	register u32 holdtime = DIV_ROUND_UP(imx_get_fecclk(), 100000000) - 1;
 #ifdef FEC_QUIRK_ENET_MAC
 	speed--;
 #endif
-	writel(speed << 1 | hold << 8, &eth->mii_speed);
+	speed <<= 1;
+	holdtime <<= 8;
+	writel(speed | holdtime, &eth->mii_speed);
 	debug("%s: mii_speed %08x\n", __func__, readl(&eth->mii_speed));
 }
 
@@ -366,7 +360,7 @@ static int fec_get_hwaddr(struct eth_device *dev, int dev_id,
 						unsigned char *mac)
 {
 	imx_get_mac_from_fuse(dev_id, mac);
-	return !is_valid_ethaddr(mac);
+	return !is_valid_ether_addr(mac);
 }
 
 static int fec_set_hwaddr(struct eth_device *dev)
@@ -536,8 +530,10 @@ static int fec_open(struct eth_device *edev)
 static int fec_init(struct eth_device *dev, bd_t* bd)
 {
 	struct fec_priv *fec = (struct fec_priv *)dev->priv;
+#if !defined(CONFIG_MX6UL)
 	uint32_t mib_ptr = (uint32_t)&fec->eth->rmon_t_drop;
 	int i;
+#endif
 
 	/* Initialize MAC address */
 	fec_set_hwaddr(dev);
@@ -566,16 +562,14 @@ static int fec_init(struct eth_device *dev, bd_t* bd)
 	writel(0x00000000, &fec->eth->gaddr1);
 	writel(0x00000000, &fec->eth->gaddr2);
 
+#if !defined(CONFIG_MX6UL)
+	/* clear MIB RAM */
+	for (i = mib_ptr; i <= mib_ptr + 0xfc; i += 4)
+		writel(0, i);
 
-	/* Do not access reserved register for i.MX6UL */
-	if (!is_cpu_type(MXC_CPU_MX6UL) && !is_cpu_type(MXC_CPU_MX6ULL)) {
-		/* clear MIB RAM */
-		for (i = mib_ptr; i <= mib_ptr + 0xfc; i += 4)
-			writel(0, i);
-
-		/* FIFO receive start register */
-		writel(0x520, &fec->eth->r_fstart);
-	}
+	/* FIFO receive start register */
+	writel(0x520, &fec->eth->r_fstart);
+#endif
 
 	/* size and address of each buffer */
 	writel(FEC_MAX_PKT_SIZE, &fec->eth->emrbr);
@@ -787,6 +781,7 @@ static int fec_recv(struct eth_device *dev)
 	struct fec_bd *rbd = &fec->rbd_base[fec->rbd_index];
 	unsigned long ievent;
 	int frame_length, len = 0;
+	struct nbuf *frame;
 	uint16_t bd_status;
 	uint32_t addr, size, end;
 	int i;
@@ -846,11 +841,12 @@ static int fec_recv(struct eth_device *dev)
 			/*
 			 * Get buffer address and size
 			 */
-			addr = readl(&rbd->data_pointer);
+			frame = (struct nbuf *)readl(&rbd->data_pointer);
 			frame_length = readw(&rbd->data_length) - 4;
 			/*
 			 * Invalidate data cache over the buffer
 			 */
+			addr = (uint32_t)frame;
 			end = roundup(addr + frame_length, ARCH_DMA_MINALIGN);
 			addr &= ~(ARCH_DMA_MINALIGN - 1);
 			invalidate_dcache_range(addr, end);
@@ -859,15 +855,16 @@ static int fec_recv(struct eth_device *dev)
 			 *  Fill the buffer and pass it to upper layers
 			 */
 #ifdef CONFIG_FEC_MXC_SWAP_PACKET
-			swap_packet((uint32_t *)addr, frame_length);
+			swap_packet((uint32_t *)frame->data, frame_length);
 #endif
-			memcpy(buff, (char *)addr, frame_length);
-			net_process_received_packet(buff, frame_length);
+			memcpy(buff, frame->data, frame_length);
+			NetReceive(buff, frame_length);
 			len = frame_length;
 		} else {
 			if (bd_status & FEC_RBD_ERR)
-				printf("error frame: 0x%08x 0x%08x\n",
-				       addr, bd_status);
+				printf("error frame: 0x%08lx 0x%08x\n",
+						(ulong)rbd->data_pointer,
+						bd_status);
 		}
 
 		/*
@@ -1122,7 +1119,6 @@ int fecmxc_initialize_multi(bd_t *bd, int dev_id, int phy_id, uint32_t addr)
 #ifdef CONFIG_PHYLIB
 	phydev = phy_find_by_mask(bus, 1 << phy_id, PHY_INTERFACE_MODE_RGMII);
 	if (!phydev) {
-		mdio_unregister(bus);
 		free(bus);
 		return -ENOMEM;
 	}
@@ -1134,7 +1130,6 @@ int fecmxc_initialize_multi(bd_t *bd, int dev_id, int phy_id, uint32_t addr)
 #ifdef CONFIG_PHYLIB
 		free(phydev);
 #endif
-		mdio_unregister(bus);
 		free(bus);
 	}
 	return ret;

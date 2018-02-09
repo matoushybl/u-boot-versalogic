@@ -97,7 +97,7 @@ static const struct ns16550_platdata cairo_serial = {
 };
 
 U_BOOT_DEVICE(cairo_uart) = {
-	"ns16550_serial",
+	"serial_omap",
 	&cairo_serial
 };
 

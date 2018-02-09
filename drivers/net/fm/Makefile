@@ -6,7 +6,6 @@
 
 obj-y += dtsec.o
 obj-y += eth.o
-obj-y += fdt.o
 obj-y += fm.o
 obj-y += init.o
 obj-y += tgec.o
@@ -38,4 +37,3 @@ obj-$(CONFIG_PPC_T4160) += t4240.o
 obj-$(CONFIG_PPC_T4080) += t4240.o
 obj-$(CONFIG_PPC_B4420) += b4860.o
 obj-$(CONFIG_PPC_B4860) += b4860.o
-obj-$(CONFIG_LS1043A)	+= ls1043.o

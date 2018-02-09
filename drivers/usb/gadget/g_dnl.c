@@ -12,7 +12,6 @@
 
 #include <mmc.h>
 #include <part.h>
-#include <usb.h>
 
 #include <g_dnl.h>
 #include <usb_mass_storage.h>
@@ -93,6 +92,8 @@ static int g_dnl_unbind(struct usb_composite_dev *cdev)
 {
 	struct usb_gadget *gadget = cdev->gadget;
 
+	free(cdev->config);
+	cdev->config = NULL;
 	debug("%s: calling usb_gadget_disconnect for "
 			"controller '%s'\n", __func__, gadget->name);
 	usb_gadget_disconnect(gadget);
@@ -144,18 +145,6 @@ static int g_dnl_config_register(struct usb_composite_dev *cdev)
 	config->bind = g_dnl_do_config;
 
 	return usb_add_config(cdev, config);
-}
-
-__weak
-int board_usb_init(int index, enum usb_init_type init)
-{
-	return 0;
-}
-
-__weak
-int board_usb_cleanup(int index, enum usb_init_type init)
-{
-	return 0;
 }
 
 __weak

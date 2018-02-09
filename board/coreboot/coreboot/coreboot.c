@@ -10,6 +10,11 @@
 
 int arch_early_init_r(void)
 {
+#ifdef CONFIG_CROS_EC
+	if (cros_ec_board_init())
+		return -1;
+#endif
+
 	return 0;
 }
 

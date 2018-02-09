@@ -13,7 +13,6 @@
  */
 
 #include <common.h>
-#include <console.h>
 #include <stdio_dev.h>
 #include <watchdog.h>
 #include <malloc.h>
@@ -129,7 +128,7 @@ void board_init(void)
 
 #if defined(CONFIG_CMD_NET)
 	puts("NET:   ");
-	eth_initialize();
+	eth_initialize(bd);
 #endif
 
 	/* main_loop */

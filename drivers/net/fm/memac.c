@@ -12,7 +12,7 @@
 #include <phy.h>
 #include <asm/types.h>
 #include <asm/io.h>
-#include <fsl_memac.h>
+#include <asm/fsl_memac.h>
 
 #include "fm.h"
 

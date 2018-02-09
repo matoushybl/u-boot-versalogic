@@ -8,10 +8,7 @@
 #ifndef _FLASH_H_
 #define _FLASH_H_
 
-#ifndef CONFIG_SYS_MAX_FLASH_SECT
-#define CONFIG_SYS_MAX_FLASH_SECT	512
-#endif
-
+#ifndef CONFIG_SYS_NO_FLASH
 /*-----------------------------------------------------------------------
  * FLASH Info: contains chip specific data, per FLASH bank
  */
@@ -43,9 +40,6 @@ typedef struct {
 	ulong   addr_unlock1;		/* unlock address 1 for AMD flash roms  */
 	ulong   addr_unlock2;		/* unlock address 2 for AMD flash roms  */
 	const char *name;		/* human-readable name	                */
-#endif
-#ifdef CONFIG_MTD
-	struct mtd_info *mtd;
 #endif
 } flash_info_t;
 
@@ -465,9 +459,6 @@ extern flash_info_t *flash_get_info(ulong base);
 #define FLASH_S29GL064M 0x00F0		/* Spansion S29GL064M-R6		*/
 #define FLASH_S29GL128N 0x00F1		/* Spansion S29GL128N			*/
 
-#define FLASH_STM32F4	0x00F2		/* STM32F4 Embedded Flash */
-#define FLASH_STM32F1	0x00F3		/* STM32F1 Embedded Flash */
-
 #define FLASH_UNKNOWN	0xFFFF		/* unknown flash type			*/
 
 
@@ -505,5 +496,7 @@ extern flash_info_t *flash_get_info(ulong base);
  */
 #define FLASH_ERASE_TIMEOUT	120000	/* timeout for erasing in ms		*/
 #define FLASH_WRITE_TIMEOUT	500	/* timeout for writes  in ms		*/
+
+#endif /* !CONFIG_SYS_NO_FLASH */
 
 #endif /* _FLASH_H_ */

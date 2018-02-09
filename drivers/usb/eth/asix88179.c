@@ -12,7 +12,6 @@
 #include <linux/mii.h>
 #include "usb_ether.h"
 #include <malloc.h>
-#include <memalign.h>
 #include <errno.h>
 
 /* ASIX AX88179 based USB 3.0 Ethernet Devices */
@@ -559,7 +558,7 @@ static int asix_recv(struct eth_device *eth)
 
 		frame_pos += 2;
 
-		net_process_received_packet(recv_buf + frame_pos, pkt_len);
+		NetReceive(recv_buf + frame_pos, pkt_len);
 
 		pkt_hdr++;
 		frame_pos += ((pkt_len + 7) & 0xFFF8)-2;

@@ -124,7 +124,7 @@ int misc_init_r(void)
 	status_led_set(1, STATUS_LED_ON);
 	status_led_set(2, STATUS_LED_ON);
 
-	omap_die_id_display();
+	dieid_num_r();
 
 	return 0;
 }

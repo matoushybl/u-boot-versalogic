@@ -14,13 +14,12 @@
 #include <asm/u-boot.h>
 #include <sata.h>
 #include <scsi.h>
-#include <errno.h>
 #include <fat.h>
 #include <image.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
-int spl_sata_load_image(void)
+void spl_sata_load_image(void)
 {
 	int err;
 	block_dev_desc_t *stor_dev;
@@ -30,13 +29,11 @@ int spl_sata_load_image(void)
 #ifdef CONFIG_SPL_LIBCOMMON_SUPPORT
 		printf("spl: sata init failed: err - %d\n", err);
 #endif
-		return err;
+		hang();
 	} else {
 		/* try to recognize storage devices immediately */
 		scsi_scan(0);
 		stor_dev = scsi_get_dev(0);
-		if (!stor_dev)
-			return -ENODEV;
 	}
 
 #ifdef CONFIG_SPL_OS_BOOT
@@ -48,8 +45,6 @@ int spl_sata_load_image(void)
 				CONFIG_SPL_FS_LOAD_PAYLOAD_NAME);
 	if (err) {
 		puts("Error loading sata device\n");
-		return err;
+		hang();
 	}
-
-	return 0;
 }

@@ -69,9 +69,8 @@ static u16 ace_readw(unsigned off)
 	return in16(base + off);
 }
 
-static unsigned long systemace_read(block_dev_desc_t *block_dev,
-				    unsigned long start, lbaint_t blkcnt,
-				    void *buffer);
+static unsigned long systemace_read(int dev, unsigned long start,
+					lbaint_t blkcnt, void *buffer);
 
 static block_dev_desc_t systemace_dev = { 0 };
 
@@ -137,9 +136,8 @@ block_dev_desc_t *systemace_get_dev(int dev)
  * the dev_desc) to read blocks of data. The return value is the
  * number of blocks read. A zero return indicates an error.
  */
-static unsigned long systemace_read(block_dev_desc_t *block_dev,
-				    unsigned long start, lbaint_t blkcnt,
-				    void *buffer)
+static unsigned long systemace_read(int dev, unsigned long start,
+					lbaint_t blkcnt, void *buffer)
 {
 	int retry;
 	unsigned blk_countdown;

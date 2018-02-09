@@ -35,6 +35,8 @@
 /*
  * UART configuration
  */
+#define CONFIG_DW_SERIAL
+#define CONFIG_SYS_NS16550
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_CLK		166666666
 #define CONFIG_BAUDRATE			115200
@@ -42,6 +44,7 @@
 /*
  * Ethernet PHY configuration
  */
+#define CONFIG_PHYLIB
 #define CONFIG_PHY_GIGE
 
 /*
@@ -59,13 +62,17 @@
 /*
  * Ethernet configuration
  */
+#define CONFIG_DESIGNWARE_ETH
 #define ETH0_BASE_ADDRESS		0xFE100000
 #define ETH1_BASE_ADDRESS		0xFE110000
 
 /*
  * Command line configuration
  */
+#include <config_cmd_default.h>
+
 #define CONFIG_CMD_DHCP
+#define CONFIG_CMD_ELF
 #define CONFIG_CMD_PING
 
 #define CONFIG_OF_LIBFDT
@@ -92,6 +99,7 @@
  * Console configuration
  */
 #define CONFIG_SYS_LONGHELP
+#define CONFIG_SYS_PROMPT		"[tb100]:~# "
 #define CONFIG_SYS_CBSIZE		256
 #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
 #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \

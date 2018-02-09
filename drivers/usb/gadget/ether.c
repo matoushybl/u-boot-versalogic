@@ -9,16 +9,13 @@
  */
 
 #include <common.h>
-#include <console.h>
 #include <asm/errno.h>
 #include <linux/netdevice.h>
 #include <linux/usb/ch9.h>
 #include <linux/usb/cdc.h>
 #include <linux/usb/gadget.h>
 #include <net.h>
-#include <usb.h>
 #include <malloc.h>
-#include <memalign.h>
 #include <linux/ctype.h>
 
 #include "gadget_chips.h"
@@ -256,7 +253,7 @@ static inline int BITRATE(struct usb_gadget *g)
 #if defined(CONFIG_USBNET_MANUFACTURER)
 static char *iManufacturer = CONFIG_USBNET_MANUFACTURER;
 #else
-static char *iManufacturer = "U-Boot";
+static char *iManufacturer = "U-boot";
 #endif
 
 /* These probably need to be configurable. */
@@ -1251,7 +1248,6 @@ eth_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 		switch (wValue >> 8) {
 
 		case USB_DT_DEVICE:
-			device_desc.bMaxPacketSize0 = gadget->ep0->maxpacket;
 			value = min(wLength, (u16) sizeof device_desc);
 			memcpy(req->buf, &device_desc, value);
 			break;
@@ -1525,7 +1521,7 @@ static int rx_submit(struct eth_dev *dev, struct usb_request *req,
 	 * RNDIS headers involve variable numbers of LE32 values.
 	 */
 
-	req->buf = (u8 *)net_rx_packets[0];
+	req->buf = (u8 *) NetRxPackets[0];
 	req->length = size;
 	req->complete = rx_complete;
 
@@ -1648,13 +1644,13 @@ static int eth_start_xmit (struct sk_buff *skb, struct net_device *net)
 	if (!eth_is_promisc (dev)) {
 		u8		*dest = skb->data;
 
-		if (is_multicast_ethaddr(dest)) {
+		if (is_multicast_ether_addr(dest)) {
 			u16	type;
 
 			/* ignores USB_CDC_PACKET_TYPE_MULTICAST and host
 			 * SET_ETHERNET_MULTICAST_FILTERS requests
 			 */
-			if (is_broadcast_ethaddr(dest))
+			if (is_broadcast_ether_addr(dest))
 				type = USB_CDC_PACKET_TYPE_BROADCAST;
 			else
 				type = USB_CDC_PACKET_TYPE_ALL_MULTICAST;
@@ -1910,7 +1906,7 @@ static int eth_stop(struct eth_dev *dev)
 		/* Wait until host receives OID_GEN_MEDIA_CONNECT_STATUS */
 		ts = get_timer(0);
 		while (get_timer(ts) < timeout)
-			usb_gadget_handle_interrupts(0);
+			usb_gadget_handle_interrupts();
 #endif
 
 		rndis_uninit(dev->rndis_config);
@@ -1945,7 +1941,7 @@ static int is_eth_addr_valid(char *str)
 		}
 
 		/* Now check the contents. */
-		return is_valid_ethaddr(ea);
+		return is_valid_ether_addr(ea);
 	}
 	return 0;
 }
@@ -1974,7 +1970,7 @@ static int get_ether_addr(const char *str, u8 *dev_addr)
 			num |= (nibble(*str++));
 			dev_addr[i] = num;
 		}
-		if (is_valid_ethaddr(dev_addr))
+		if (is_valid_ether_addr(dev_addr))
 			return 0;
 	}
 	return 1;
@@ -2136,6 +2132,7 @@ autoconf_fail:
 		hs_subset_descriptors();
 	}
 
+	device_desc.bMaxPacketSize0 = gadget->ep0->maxpacket;
 	usb_gadget_set_selfpowered(gadget);
 
 	/* For now RNDIS is always a second config */
@@ -2315,8 +2312,6 @@ static int usb_eth_init(struct eth_device *netdev, bd_t *bd)
 		goto fail;
 	}
 
-	board_usb_init(0, USB_INIT_DEVICE);
-
 	/* Configure default mac-addresses for the USB ethernet device */
 #ifdef CONFIG_USBNET_DEV_ADDR
 	strlcpy(dev_addr, CONFIG_USBNET_DEV_ADDR, sizeof(dev_addr));
@@ -2363,7 +2358,7 @@ static int usb_eth_init(struct eth_device *netdev, bd_t *bd)
 			error("The remote end did not respond in time.");
 			goto fail;
 		}
-		usb_gadget_handle_interrupts(0);
+		usb_gadget_handle_interrupts();
 	}
 
 	packet_received = 0;
@@ -2431,7 +2426,7 @@ static int usb_eth_send(struct eth_device *netdev, void *packet, int length)
 			printf("timeout sending packets to usb ethernet\n");
 			return -1;
 		}
-		usb_gadget_handle_interrupts(0);
+		usb_gadget_handle_interrupts();
 	}
 	if (rndis_pkt)
 		free(rndis_pkt);
@@ -2446,13 +2441,12 @@ static int usb_eth_recv(struct eth_device *netdev)
 {
 	struct eth_dev *dev = &l_ethdev;
 
-	usb_gadget_handle_interrupts(0);
+	usb_gadget_handle_interrupts();
 
 	if (packet_received) {
 		debug("%s: packet received\n", __func__);
 		if (dev->rx_req) {
-			net_process_received_packet(net_rx_packets[0],
-						    dev->rx_req->length);
+			NetReceive(NetRxPackets[0], dev->rx_req->length);
 			packet_received = 0;
 
 			rx_submit(dev, dev->rx_req, 0);
@@ -2492,12 +2486,11 @@ void usb_eth_halt(struct eth_device *netdev)
 
 	/* Clear pending interrupt */
 	if (dev->network_started) {
-		usb_gadget_handle_interrupts(0);
+		usb_gadget_handle_interrupts();
 		dev->network_started = 0;
 	}
 
 	usb_gadget_unregister_driver(&eth_driver);
-	board_usb_cleanup(0, USB_INIT_DEVICE);
 }
 
 static struct usb_gadget_driver eth_driver = {
@@ -2507,7 +2500,6 @@ static struct usb_gadget_driver eth_driver = {
 	.unbind		= eth_unbind,
 
 	.setup		= eth_setup,
-	.reset		= eth_disconnect,
 	.disconnect	= eth_disconnect,
 
 	.suspend	= eth_suspend,

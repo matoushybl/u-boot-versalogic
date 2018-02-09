@@ -13,8 +13,7 @@
 typedef struct vidinfo {
 	ushort vl_col;		/* Number of columns (i.e. 640) */
 	ushort vl_row;		/* Number of rows (i.e. 480) */
-	ushort vl_rot;		/* Rotation of Display (0, 1, 2, 3) */
-	u_long vl_clk;		/* pixel clock in ps    */
+	u_long vl_clk;	/* pixel clock in ps    */
 
 	/* LCD configuration register */
 	u_long vl_sync;		/* Horizontal / vertical sync */

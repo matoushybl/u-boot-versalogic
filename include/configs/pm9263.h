@@ -18,6 +18,7 @@
  */
 #include <asm/hardware.h>
 
+#define CONFIG_SYS_GENERIC_BOARD
 
 /* ARM asynchronous clock */
 #define CONFIG_DISPLAY_CPUINFO
@@ -196,6 +197,13 @@
 /*
  * Command line configuration.
  */
+#include <config_cmd_default.h>
+#undef CONFIG_CMD_BDI
+#undef CONFIG_CMD_IMI
+#undef CONFIG_CMD_FPGA
+#undef CONFIG_CMD_LOADS
+#undef CONFIG_CMD_IMLS
+
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_PING		1
 #define CONFIG_CMD_DHCP		1
@@ -331,6 +339,7 @@
 
 #define CONFIG_BOOTCOMMAND		"run flashboot"
 #define CONFIG_ROOTPATH			"/ronetix/rootfs"
+#define CONFIG_AUTOBOOT_PROMPT		"autoboot in %d seconds\n", bootdelay
 
 #define CONFIG_CON_ROT			"fbcon=rotate:3 "
 #define CONFIG_BOOTARGS			"root=/dev/mtdblock4 rootfstype=jffs2 "\
@@ -369,6 +378,7 @@
 
 #define CONFIG_BAUDRATE			115200
 
+#define CONFIG_SYS_PROMPT		"u-boot-pm9263> "
 #define CONFIG_SYS_CBSIZE		256
 #define CONFIG_SYS_MAXARGS		16
 #define CONFIG_SYS_PBSIZE		\

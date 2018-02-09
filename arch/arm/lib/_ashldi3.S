@@ -4,8 +4,6 @@
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
-#include <linux/linkage.h>
-
 #ifdef __ARMEB__
 #define al r1
 #define ah r0
@@ -15,8 +13,9 @@
 #endif
 
 .globl __ashldi3
+.globl	__aeabi_llsl
 __ashldi3:
-ENTRY(__aeabi_llsl)
+__aeabi_llsl:
 
 	subs	r3, r2, #32
 	rsb	ip, r2, #32
@@ -25,4 +24,3 @@ ENTRY(__aeabi_llsl)
 	orrmi	ah, ah, al, lsr ip
 	mov	al, al, lsl r2
 	mov	pc, lr
-ENDPROC(__aeabi_llsl)

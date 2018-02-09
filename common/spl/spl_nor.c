@@ -7,7 +7,7 @@
 #include <common.h>
 #include <spl.h>
 
-int spl_nor_load_image(void)
+void spl_nor_load_image(void)
 {
 	/*
 	 * Loading of the payload to SDRAM is done with skipping of
@@ -43,7 +43,7 @@ int spl_nor_load_image(void)
 			       (void *)(CONFIG_SYS_FDT_BASE),
 			       (16 << 10));
 
-			return 0;
+			return;
 		} else {
 			puts("The Expected Linux image was not found.\n"
 			     "Please check your NOR configuration.\n"
@@ -62,6 +62,4 @@ int spl_nor_load_image(void)
 	memcpy((void *)spl_image.load_addr,
 	       (void *)(CONFIG_SYS_UBOOT_BASE + sizeof(struct image_header)),
 	       spl_image.size);
-
-	return 0;
 }

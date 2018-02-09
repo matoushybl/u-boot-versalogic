@@ -10,8 +10,11 @@
 #include <common.h>
 #include <autoboot.h>
 #include <cli.h>
-#include <console.h>
 #include <version.h>
+
+#ifdef is_boot_from_usb
+#include <environment.h>
+#endif
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -19,6 +22,19 @@ DECLARE_GLOBAL_DATA_PTR;
  * Board-specific Platform code can reimplement show_boot_progress () if needed
  */
 __weak void show_boot_progress(int val) {}
+
+static void modem_init(void)
+{
+#ifdef CONFIG_MODEM_SUPPORT
+	debug("DEBUG: main_loop:   gd->do_mdm_init=%lu\n", gd->do_mdm_init);
+	if (gd->do_mdm_init) {
+		char *str = getenv("mdm_cmd");
+
+		setenv("preboot", str);  /* set or delete definition */
+		mdm_init(); /* wait for modem connection */
+	}
+#endif  /* CONFIG_MODEM_SUPPORT */
+}
 
 static void run_preboot_environment_command(void)
 {
@@ -53,6 +69,7 @@ void main_loop(void)
 	puts("upgraded by the late 2014 may break or be removed.\n");
 #endif
 
+	modem_init();
 #ifdef CONFIG_VERSION_VARIABLE
 	setenv("ver", version_string);  /* set version variable */
 #endif /* CONFIG_VERSION_VARIABLE */
@@ -62,7 +79,7 @@ void main_loop(void)
 	run_preboot_environment_command();
 
 #if defined(CONFIG_UPDATE_TFTP)
-	update_tftp(0UL, NULL, NULL);
+	update_tftp(0UL);
 #endif /* CONFIG_UPDATE_TFTP */
 
 	s = bootdelay_process();

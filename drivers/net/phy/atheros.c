@@ -33,9 +33,6 @@ static int ar8035_config(struct phy_device *phydev)
 
 	phydev->supported = phydev->drv->features;
 
-	genphy_config_aneg(phydev);
-	genphy_restart_aneg(phydev);
-
 	return 0;
 }
 
@@ -54,7 +51,7 @@ static struct phy_driver AR8031_driver =  {
 	.uid = 0x4dd074,
 	.mask = 0xffffffef,
 	.features = PHY_GBIT_FEATURES,
-	.config = ar8035_config,
+	.config = ar8021_config,
 	.startup = genphy_startup,
 	.shutdown = genphy_shutdown,
 };

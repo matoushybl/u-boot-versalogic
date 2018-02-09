@@ -428,13 +428,8 @@ int ft_board_setup(void *blob, bd_t *bd)
 {
 	phys_addr_t base;
 	phys_size_t size;
-#if defined(CONFIG_P1020RDB_PD) || defined(CONFIG_P1020RDB_PC)
 	const char *soc_usb_compat = "fsl-usb2-dr";
-	int usb_err, usb1_off, usb2_off;
-#endif
-#if defined(CONFIG_SDCARD) || defined(CONFIG_SPIFLASH)
-	int err;
-#endif
+	int err, usb1_off, usb2_off;
 
 	ft_cpu_setup(blob, bd);
 
@@ -478,7 +473,6 @@ int ft_board_setup(void *blob, bd_t *bd)
 	}
 #endif
 
-#if defined(CONFIG_P1020RDB_PD) || defined(CONFIG_P1020RDB_PC)
 /* Delete USB2 node as it is muxed with eLBC */
 	usb1_off = fdt_node_offset_by_compatible(blob, -1,
 		soc_usb_compat);
@@ -494,12 +488,11 @@ int ft_board_setup(void *blob, bd_t *bd)
 		       soc_usb_compat);
 		return usb2_off;
 	}
-	usb_err = fdt_del_node(blob, usb2_off);
-	if (usb_err < 0) {
+	err = fdt_del_node(blob, usb2_off);
+	if (err < 0) {
 		printf("WARNING: could not remove %s\n", soc_usb_compat);
-		return usb_err;
+		return err;
 	}
-#endif
 
 	return 0;
 }

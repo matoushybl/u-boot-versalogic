@@ -16,7 +16,7 @@
 #include <asm/arch/omap.h>
 
 /* ----------------------------------------------------------------------------
- * Supported U-Boot commands
+ * Supported U-boot commands
  * ----------------------------------------------------------------------------
  */
 #define CONFIG_CMD_MMC
@@ -28,9 +28,10 @@
  * When revision is statically configured via CONFIG_STATIC_BOARD_REV,
  * this option can be removed. Generated binary is leaner by ~16Kbytes.
  */
+#define CONFIG_CMD_NET
 
 /* ----------------------------------------------------------------------------
- * Supported U-Boot features
+ * Supported U-boot features
  * ----------------------------------------------------------------------------
  */
 #define CONFIG_SILENT_CONSOLE

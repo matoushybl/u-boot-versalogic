@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Freescale Semiconductor, Inc.
+ * Copyright (C) 2015-2016 Freescale Semiconductor, Inc.
  *
  * Configuration settings for the Freescale i.MX7D 12x12 DDR3 ARM2 board.
  *
@@ -26,11 +26,18 @@
 #define CONFIG_ENV_IS_IN_MMC
 #endif
 
+/* I2C configs */
+#define CONFIG_CMD_I2C
+#ifdef CONFIG_CMD_I2C
+#define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_MXC
+#define CONFIG_SYS_I2C_SPEED		100000
 /* PMIC */
 #define CONFIG_POWER
 #define CONFIG_POWER_I2C
-#define CONFIG_POWER_PFUZE3000
-#define CONFIG_POWER_PFUZE3000_I2C_ADDR	0x08
+#define CONFIG_POWER_PFUZE300
+#define CONFIG_POWER_PFUZE300_I2C_ADDR	0x08
+#endif
 
 #ifdef CONFIG_SYS_USE_SPINOR
 #define CONFIG_CMD_SF
@@ -42,6 +49,10 @@
 #define CONFIG_SF_DEFAULT_MODE (SPI_MODE_0)
 #define CONFIG_SF_DEFAULT_CS   0
 #endif
+
+#define CONFIG_CMD_PING
+#define CONFIG_CMD_DHCP
+#define CONFIG_CMD_NET
 
 #include "mx7d_arm2.h"
 

@@ -7,7 +7,6 @@
 
 #include <common.h>
 #include <command.h>
-#include <console.h>
 #include <malloc.h>
 #include <stdio_dev.h>
 #include <version.h>
@@ -179,7 +178,7 @@ void sh_generic_init(void)
 #endif
 #if defined(CONFIG_CMD_NET)
 	puts("Net:   ");
-	eth_initialize();
+	eth_initialize(gd->bd);
 #endif /* CONFIG_CMD_NET */
 
 	while (1) {

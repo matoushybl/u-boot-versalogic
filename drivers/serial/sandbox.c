@@ -16,7 +16,6 @@
 #include <lcd.h>
 #include <os.h>
 #include <serial.h>
-#include <video.h>
 #include <linux/compiler.h>
 #include <asm/state.h>
 
@@ -25,7 +24,7 @@ DECLARE_GLOBAL_DATA_PTR;
 /*
  *
  *   serial_buf: A buffer that holds keyboard characters for the
- *		 Sandbox U-Boot.
+ *		 Sandbox U-boot.
  *
  * invariants:
  *   serial_buf_write		 == serial_buf_read -> empty buffer
@@ -115,7 +114,9 @@ static int sandbox_serial_pending(struct udevice *dev, bool input)
 		return 0;
 
 	os_usleep(100);
-	video_sync_all();
+#ifdef CONFIG_LCD
+	lcd_sync();
+#endif
 	if (next_index == serial_buf_read)
 		return 1;	/* buffer full */
 

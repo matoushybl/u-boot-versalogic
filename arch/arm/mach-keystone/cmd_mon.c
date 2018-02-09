@@ -37,7 +37,7 @@ static int do_mon_install(cmd_tbl_t *cmdtp, int flag, int argc,
 	if (argc < 2)
 		return CMD_RET_USAGE;
 
-	freq = CONFIG_SYS_HZ_CLOCK;
+	freq = clk_get_rate(sys_clk0_6_clk);
 
 	addr = simple_strtoul(argv[1], NULL, 16);
 
@@ -55,13 +55,8 @@ U_BOOT_CMD(mon_install, 2, 0, do_mon_install,
 
 static void core_spin(void)
 {
-	while (1) {
-		asm volatile (
-			"dsb\n"
-			"isb\n"
-			"wfi\n"
-		);
-	}
+	while (1)
+		; /* forever */;
 }
 
 int mon_power_on(int core_id, void *ep)

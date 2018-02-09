@@ -18,6 +18,9 @@
 
 #undef CONFIG_SPL_OS_BOOT
 
+/* Enable Generic board */
+#define CONFIG_SYS_GENERIC_BOARD
+
 /* Device Tree defines */
 #define CONFIG_OF_LIBFDT
 #define CONFIG_OF_BOARD_SETUP
@@ -54,6 +57,7 @@
 #define CONFIG_ENV_SIZE			(16 << 10)	/* 16 KB */
 #define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + CONFIG_ENV_SIZE)
 #define CONFIG_SYS_REDUNDAND_ENVIRONMENT
+#define CONFIG_CMD_SAVEENV
 
 /* Enhance our eMMC support / experience. */
 #define CONFIG_HSMMC2_8BIT
@@ -86,6 +90,7 @@
 
 /* Enabled commands */
 #define CONFIG_CMD_DHCP		/* DHCP Support			*/
+#define CONFIG_CMD_NET		/* bootp, tftpboot, rarpboot	*/
 #define CONFIG_CMD_PING
 
 /* USB Networking options */
@@ -102,12 +107,14 @@
  * Miscellaneous configurable options
  */
 #undef CONFIG_SYS_AUTOLOAD
+#undef CONFIG_SYS_PROMPT
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #undef CONFIG_BOOTCOMMAND
 #undef CONFIG_BOOTDELAY
 
 #define CONFIG_BOOTDELAY		3
 #define CONFIG_SYS_AUTOLOAD		"no"
+#define CONFIG_SYS_PROMPT		"CM-T54 # "
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	DEFAULT_LINUX_BOOT_ENV \

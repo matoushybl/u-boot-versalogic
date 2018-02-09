@@ -43,7 +43,7 @@
 #include <net.h>
 #include <command.h>
 #include <asm/io.h>
-#include <mach/au1x00.h>
+#include <asm/au1x00.h>
 
 #if defined(CONFIG_CMD_MII)
 #include <miiphy.h>
@@ -187,14 +187,13 @@ static int au1x00_recv(struct eth_device* dev){
 
 		if(status&RX_ERROR){
 			printf("Rx error 0x%x\n", status);
-		} else {
+		}
+		else{
 			/* Pass the packet up to the protocol layers. */
-			net_process_received_packet(net_rx_packets[next_rx],
-						    length - 4);
+			NetReceive(NetRxPackets[next_rx], length - 4);
 		}
 
-		fifo_rx[next_rx].addr =
-			(virt_to_phys(net_rx_packets[next_rx])) | RX_DMA_ENABLE;
+		fifo_rx[next_rx].addr = (virt_to_phys(NetRxPackets[next_rx]))|RX_DMA_ENABLE;
 
 		next_rx++;
 		if(next_rx>=NO_OF_FIFOS){
@@ -235,12 +234,11 @@ static int au1x00_init(struct eth_device* dev, bd_t * bd){
 	for(i=0;i<NO_OF_FIFOS;i++){
 		fifo_tx[i].len = 0;
 		fifo_tx[i].addr = virt_to_phys(&txbuf[0]);
-		fifo_rx[i].addr = (virt_to_phys(net_rx_packets[i])) |
-			RX_DMA_ENABLE;
+		fifo_rx[i].addr = (virt_to_phys(NetRxPackets[i]))|RX_DMA_ENABLE;
 	}
 
 	/* Put mac addr in little endian */
-#define ea eth_get_ethaddr()
+#define ea eth_get_dev()->enetaddr
 	*mac_addr_high	=	(ea[5] <<  8) | (ea[4]	    ) ;
 	*mac_addr_low	=	(ea[3] << 24) | (ea[2] << 16) |
 		(ea[1] <<  8) | (ea[0]	    ) ;
@@ -279,7 +277,7 @@ int au1x00_enet_initialize(bd_t *bis){
 
 	memset(dev, 0, sizeof *dev);
 
-	strcpy(dev->name, "Au1X00 ethernet");
+	sprintf(dev->name, "Au1X00 ethernet");
 	dev->iobase = 0;
 	dev->priv   = 0;
 	dev->init   = au1x00_init;

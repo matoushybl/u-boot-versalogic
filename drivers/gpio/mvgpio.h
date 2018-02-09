@@ -14,8 +14,9 @@
 
 #include <common.h>
 
+#ifdef CONFIG_SHEEVA_88SV331xV5
 /*
- * GPIO Register map for Marvell SOCs
+ * GPIO Register map for SHEEVA 88SV331xV5
  */
 struct gpio_reg {
 	u32 gplr;	/* Pin Level Register - 0x0000 */
@@ -50,5 +51,8 @@ struct gpio_reg {
 	u32 pad12[2];
 	u32 apmask;	/* Bitwise Mask of Edge Detect Register - 0x009C */
 };
+#else
+#error "CPU core subversion not defined"
+#endif
 
 #endif /* __MVGPIO_H__ */

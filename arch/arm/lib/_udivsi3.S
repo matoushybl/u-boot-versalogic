@@ -1,5 +1,3 @@
-#include <linux/linkage.h>
-
 /* # 1 "libgcc1.S" */
 @ libgcc1 routines for ARM cpu.
 @ Division routines, written by Richard Earnshaw, (rearnsha@armltd.co.uk)
@@ -74,7 +72,8 @@ Ldiv0:
 	ldmia	sp!, {pc}
 	.size  __udivsi3       , . -  __udivsi3
 
-ENTRY(__aeabi_uidivmod)
+.globl __aeabi_uidivmod
+__aeabi_uidivmod:
 
 	stmfd	sp!, {r0, r1, ip, lr}
 	bl	__aeabi_uidiv
@@ -82,9 +81,9 @@ ENTRY(__aeabi_uidivmod)
 	mul	r3, r0, r2
 	sub	r1, r1, r3
 	mov	pc, lr
-ENDPROC(__aeabi_uidivmod)
 
-ENTRY(__aeabi_idivmod)
+.globl __aeabi_idivmod
+__aeabi_idivmod:
 
 	stmfd	sp!, {r0, r1, ip, lr}
 	bl	__aeabi_idiv
@@ -92,4 +91,3 @@ ENTRY(__aeabi_idivmod)
 	mul	r3, r0, r2
 	sub	r1, r1, r3
 	mov	pc, lr
-ENDPROC(__aeabi_idivmod)

@@ -21,6 +21,8 @@
 /*
  * Command line configuration.
  */
+#include <config_cmd_default.h>
+
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_DISPLAY
 #define CONFIG_CMD_DHCP
@@ -30,6 +32,7 @@
 #define CONFIG_CMD_DTT
 #define CONFIG_CMD_IDE
 #define CONFIG_CMD_FAT
+#define CONFIG_CMD_NFS
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_SNTP
 

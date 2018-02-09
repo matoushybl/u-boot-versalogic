@@ -8,7 +8,6 @@
  */
 
 #include <common.h>
-#include <console.h>
 #include <asm/io.h>
 #include <fs.h>
 #include <zynqpl.h>

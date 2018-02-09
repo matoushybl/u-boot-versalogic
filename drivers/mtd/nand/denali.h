@@ -5,9 +5,6 @@
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
-#ifndef __DENALI_H__
-#define __DENALI_H__
-
 #include <linux/mtd/nand.h>
 
 #define DEVICE_RESET				0x0
@@ -384,6 +381,9 @@
 
 #define CUSTOM_CONF_PARAMS      0
 
+#ifndef _LLD_NAND_
+#define _LLD_NAND_
+
 #define INDEX_CTRL_REG    0x0
 #define INDEX_DATA_REG    0x10
 
@@ -463,4 +463,4 @@ struct denali_nand_info {
 	uint32_t max_banks;
 };
 
-#endif /* __DENALI_H__ */
+#endif /*_LLD_NAND_*/

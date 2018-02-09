@@ -8,8 +8,8 @@
 #include <dm.h>
 #include <errno.h>
 #include <watchdog.h>
-#include <asm/arch/imx-regs.h>
-#include <asm/arch/clock.h>
+#include <asm/arch-mx6/imx-regs.h>
+#include <asm/arch-mx6/clock.h>
 #include <dm/platform_data/serial_mxc.h>
 #include <serial.h>
 #include <linux/compiler.h>
@@ -75,7 +75,6 @@
 #define  UCR4_DREN	 (1<<0)  /* Recv data ready interrupt enable */
 #define  UFCR_RXTL_SHF   0       /* Receiver trigger level shift */
 #define  UFCR_RFDIV      (7<<7)  /* Reference freq divider mask */
-#define  UFCR_RFDIV_SHF  7      /* Reference freq divider shift */
 #define  UFCR_TXTL_SHF   10      /* Transmitter trigger level shift */
 #define  USR1_PARITYERR  (1<<15) /* Parity error interrupt flag */
 #define  USR1_RTSS	 (1<<14) /* RTS pin status */
@@ -136,10 +135,6 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#define TXTL  2 /* reset default */
-#define RXTL  1 /* reset default */
-#define RFDIV 4 /* divide input clock by 2 */
-
 static void mxc_serial_setbrg(void)
 {
 	u32 clk = imx_get_uartclk();
@@ -147,9 +142,7 @@ static void mxc_serial_setbrg(void)
 	if (!gd->baudrate)
 		gd->baudrate = CONFIG_BAUDRATE;
 
-	__REG(UART_PHYS + UFCR) = (RFDIV << UFCR_RFDIV_SHF)
-		| (TXTL << UFCR_TXTL_SHF)
-		| (RXTL << UFCR_RXTL_SHF);
+	__REG(UART_PHYS + UFCR) = 4 << 7; /* divide input clock by 2 */
 	__REG(UART_PHYS + UBIR) = 0xf;
 	__REG(UART_PHYS + UBMR) = clk / (2 * gd->baudrate);
 

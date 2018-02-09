@@ -12,7 +12,6 @@
 #include <common.h>
 #include <cli.h>
 #include <cli_hush.h>
-#include <console.h>
 #include <fdtdec.h>
 #include <malloc.h>
 
@@ -136,7 +135,7 @@ int do_run(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 }
 #endif
 
-#if CONFIG_IS_ENABLED(OF_CONTROL)
+#ifdef CONFIG_OF_CONTROL
 bool cli_process_fdt(const char **cmdp)
 {
 	/* Allow the fdt to override the boot command */
@@ -197,7 +196,7 @@ err:
 	 */
 	hang();
 }
-#endif /* CONFIG_IS_ENABLED(OF_CONTROL) */
+#endif /* CONFIG_OF_CONTROL */
 
 void cli_loop(void)
 {

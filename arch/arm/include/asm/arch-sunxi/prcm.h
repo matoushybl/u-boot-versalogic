@@ -236,7 +236,5 @@ struct sunxi_prcm_reg {
 };
 
 void prcm_apb0_enable(u32 flags);
-void prcm_apb0_disable(u32 flags);
-
 #endif /* __ASSEMBLY__ */
 #endif /* _PRCM_H */

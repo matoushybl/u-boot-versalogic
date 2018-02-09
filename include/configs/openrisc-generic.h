@@ -31,6 +31,7 @@
 /*
  * SERIAL
  */
+# define CONFIG_SYS_NS16550
 # define CONFIG_SYS_NS16550_SERIAL
 # define CONFIG_SYS_NS16550_REG_SIZE	1
 # define CONFIG_CONS_INDEX		1
@@ -113,7 +114,11 @@
 /*
  * Command line configuration.
  */
+#include <config_cmd_default.h>
+
+
 #define CONFIG_CMD_IRQ
+#define CONFIG_CMD_ELF
 #define CONFIG_CMD_BSP
 
 #define CONFIG_CMD_MII

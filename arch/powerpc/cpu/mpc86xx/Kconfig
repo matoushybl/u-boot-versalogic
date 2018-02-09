@@ -6,7 +6,6 @@ config SYS_CPU
 
 choice
 	prompt "Target select"
-	optional
 
 config TARGET_SBC8641D
 	bool "Support sbc8641d"

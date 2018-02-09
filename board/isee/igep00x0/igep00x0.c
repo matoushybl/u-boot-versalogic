@@ -40,7 +40,7 @@ static const struct ns16550_platdata igep_serial = {
 };
 
 U_BOOT_DEVICE(igep_uart) = {
-	"ns16550_serial",
+	"serial_omap",
 	&igep_serial
 };
 
@@ -101,19 +101,6 @@ void get_board_mem_timings(struct board_sdrc_timings *timings)
 #endif
 
 #if defined(CONFIG_CMD_NET)
-
-static void reset_net_chip(int gpio)
-{
-	if (!gpio_request(gpio, "eth nrst")) {
-		gpio_direction_output(gpio, 1);
-		udelay(1);
-		gpio_set_value(gpio, 0);
-		udelay(40);
-		gpio_set_value(gpio, 1);
-		mdelay(10);
-	}
-}
-
 /*
  * Routine: setup_net_chip
  * Description: Setting up the configuration GPMC registers specific to the
@@ -123,8 +110,8 @@ static void setup_net_chip(void)
 {
 	struct ctrl *ctrl_base = (struct ctrl *)OMAP34XX_CTRL_BASE;
 
-	enable_gpmc_cs_config(gpmc_lan_config, &gpmc_cfg->cs[5],
-			CONFIG_SMC911X_BASE, GPMC_SIZE_16M);
+	enable_gpmc_cs_config(gpmc_lan_config, &gpmc_cfg->cs[5], 0x2C000000,
+			GPMC_SIZE_16M);
 
 	/* Enable off mode for NWE in PADCONF_GPMC_NWE register */
 	writew(readw(&ctrl_base->gpmc_nwe) | 0x0E00, &ctrl_base->gpmc_nwe);
@@ -134,7 +121,15 @@ static void setup_net_chip(void)
 	writew(readw(&ctrl_base->gpmc_nadv_ale) | 0x0E00,
 		&ctrl_base->gpmc_nadv_ale);
 
-	reset_net_chip(64);
+	/* Make GPIO 64 as output pin and send a magic pulse through it */
+	if (!gpio_request(64, "")) {
+		gpio_direction_output(64, 0);
+		gpio_set_value(64, 1);
+		udelay(1);
+		gpio_set_value(64, 0);
+		udelay(1);
+		gpio_set_value(64, 1);
+	}
 }
 #else
 static inline void setup_net_chip(void) {}
@@ -158,10 +153,10 @@ void set_fdt(void)
 {
 	switch (gd->bd->bi_arch_number) {
 	case MACH_TYPE_IGEP0020:
-		setenv("fdtfile", "omap3-igep0020.dtb");
+		setenv("dtbfile", "omap3-igep0020.dtb");
 		break;
 	case MACH_TYPE_IGEP0030:
-		setenv("fdtfile", "omap3-igep0030.dtb");
+		setenv("dtbfile", "omap3-igep0030.dtb");
 		break;
 	}
 }
@@ -176,7 +171,7 @@ int misc_init_r(void)
 
 	setup_net_chip();
 
-	omap_die_id_display();
+	dieid_num_r();
 
 	set_fdt();
 
@@ -205,10 +200,10 @@ void set_muxconf_regs(void)
 #if defined(CONFIG_CMD_NET)
 int board_eth_init(bd_t *bis)
 {
+	int rc = 0;
 #ifdef CONFIG_SMC911X
-	return smc911x_initialize(0, CONFIG_SMC911X_BASE);
-#else
-	return 0;
+	rc = smc911x_initialize(0, CONFIG_SMC911X_BASE);
 #endif
+	return rc;
 }
 #endif

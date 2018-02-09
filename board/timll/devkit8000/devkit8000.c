@@ -52,7 +52,7 @@ static const struct ns16550_platdata devkit8000_serial = {
 };
 
 U_BOOT_DEVICE(devkit8000_uart) = {
-	"ns16550_serial",
+	"serial_omap",
 	&devkit8000_serial
 };
 
@@ -114,7 +114,7 @@ int misc_init_r(void)
 	}
 #endif
 
-	omap_die_id_display();
+	dieid_num_r();
 
 	return 0;
 }

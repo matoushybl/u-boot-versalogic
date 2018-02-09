@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Freescale Semiconductor, Inc.
+ * Copyright (C) 2015 Freescale Semiconductor, Inc.
  *
  * Configuration settings for the Freescale i.MX6UL 14x14 DDR3 ARM2.
  *
@@ -28,6 +28,7 @@
 #endif
 
 #define CONFIG_VIDEO
+#define CONFIG_FSL_USDHC
 #define CONFIG_BOOTARGS_CMA_SIZE   ""
 
 #include "mx6ul_arm2.h"
@@ -45,6 +46,7 @@
 #define CONFIG_SF_DEFAULT_CS   0
 #endif
 
+#define CONFIG_CMD_NET
 #ifdef CONFIG_CMD_NET
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
@@ -66,6 +68,7 @@
 
 #define CONFIG_PHYLIB
 #define CONFIG_PHY_MICREL
+#define CONFIG_FEC_DMA_MINALIGN		64
 #endif
 
 #define CONFIG_MODULE_FUSE

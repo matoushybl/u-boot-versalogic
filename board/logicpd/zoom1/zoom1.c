@@ -50,7 +50,7 @@ static const struct ns16550_platdata zoom1_serial = {
 };
 
 U_BOOT_DEVICE(zoom1_uart) = {
-	"ns16550_serial",
+	"serial_omap",
 	&zoom1_serial
 };
 
@@ -80,7 +80,7 @@ int misc_init_r(void)
 {
 	twl4030_power_init();
 	twl4030_led_init(TWL4030_LED_LEDEN_LEDAON | TWL4030_LED_LEDEN_LEDBON);
-	omap_die_id_display();
+	dieid_num_r();
 
 	/*
 	 * Board Reset

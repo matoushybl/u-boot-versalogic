@@ -25,11 +25,11 @@
 .globl _x86boot_start
 _x86boot_start:
 	/*
-	 * This is the fail-safe 32-bit bootstrap entry point.
-	 *
-	 * This code is used when booting from another boot loader like
-	 * coreboot or EFI. So we repeat some of the same init found in
-	 * start16.
+	 * This is the fail safe 32-bit bootstrap entry point. The
+	 * following code is not executed from a cold-reset (actually, a
+	 * lot of it is, but from real-mode after cold reset. It is
+	 * repeated here to put the board into a state as close to cold
+	 * reset as necessary)
 	 */
 	cli
 	cld
@@ -41,34 +41,19 @@ _x86boot_start:
 	wbinvd
 
 	/* Tell 32-bit code it is being entered from an in-RAM copy */
-	movl	$GD_FLG_WARM_BOOT, %ebx
-
-	/*
-	 * Zero the BIST (Built-In Self Test) value since we don't have it.
-	 * It must be 0 or the previous loader would have reported an error.
-	 */
-	movl	$0, %ebp
-
+	movw	$GD_FLG_WARM_BOOT, %bx
 	jmp	1f
-
-	/* Add a way for tools to discover the _start entry point */
-	.align	4
-	.long	0x12345678
 _start:
 	/*
-	 * This is the 32-bit cold-reset entry point, coming from start16.
-	 * Set %ebx to GD_FLG_COLD_BOOT to indicate this.
+	 * This is the 32-bit cold-reset entry point. Initialize %bx to 0
+	 * in case we're preceeded by some sort of boot stub.
 	 */
-	movl	$GD_FLG_COLD_BOOT, %ebx
-
+	movw	$GD_FLG_COLD_BOOT, %bx
+1:
 	/* Save BIST */
 	movl	%eax, %ebp
-1:
 
-	/* Save table pointer */
-	movl	%ecx, %esi
-
-	/* Load the segement registers to match the GDT loaded in start16.S */
+	/* Load the segement registes to match the gdt loaded in start16.S */
 	movl	$(X86_GDT_ENTRY_32BIT_DS * X86_GDT_ENTRY_SIZE), %eax
 	movw	%ax, %fs
 	movw	%ax, %ds
@@ -79,11 +64,7 @@ _start:
 	/* Clear the interrupt vectors */
 	lidt	blank_idt_ptr
 
-	/*
-	 * Critical early platform init - generally not used, we prefer init
-	 * to happen later when we have a console, in case something goes
-	 * wrong.
-	 */
+	/* Early platform init (setup gpio, etc ) */
 	jmp	early_board_init
 .globl early_board_init_ret
 early_board_init_ret:
@@ -98,13 +79,14 @@ car_init_ret:
 	 * We now have CONFIG_SYS_CAR_SIZE bytes of Cache-As-RAM (or SRAM,
 	 * or fully initialised SDRAM - we really don't care which)
 	 * starting at CONFIG_SYS_CAR_ADDR to be used as a temporary stack
-	 * and early malloc() area. The MRC requires some space at the top.
+	 * and early malloc area. The MRC requires some space at the top.
 	 *
 	 * Stack grows down from top of CAR. We have:
 	 *
 	 * top-> CONFIG_SYS_CAR_ADDR + CONFIG_SYS_CAR_SIZE
 	 *	MRC area
-	 *	global_data with x86 global descriptor table
+	 *	global_data
+	 *	x86 global descriptor table
 	 *	early malloc area
 	 *	stack
 	 * bottom-> CONFIG_SYS_CAR_ADDR
@@ -115,51 +97,63 @@ car_init_ret:
 #endif
 #else
 	/*
-	 * U-Boot enters here twice. For the first time it comes from
-	 * car_init_done() with esp points to a temporary stack and esi
-	 * set to zero. For the second time it comes from fsp_init_done()
-	 * with esi holding the HOB list address returned by the FSP.
+	 * When we get here after car_init, esp points to a temporary stack
+	 * and esi holds the HOB list address returned by the FSP.
 	 */
 #endif
-	/* Set up global data */
-	mov	%esp, %eax
-	call	board_init_f_alloc_reserve
-	mov	%eax, %esp
-	call	board_init_f_init_reserve
 
-#ifdef CONFIG_DEBUG_UART
-	call	debug_uart_init
-#endif
+	/* Reserve space on stack for global data */
+	subl	$GENERATED_GBL_DATA_SIZE, %esp
 
-	/* Get address of global_data */
-	mov	%fs:0, %edx
+	/* Align global data to 16-byte boundary */
+	andl	$0xfffffff0, %esp
+	post_code(POST_START_STACK)
+
+	/* Zero the global data since it won't happen later */
+	xorl	%eax, %eax
+	movl	$GENERATED_GBL_DATA_SIZE, %ecx
+	movl	%esp, %edi
+	rep	stosb
+
 #ifdef CONFIG_HAVE_FSP
-	/* Store the HOB list if we have one */
-	test	%esi, %esi
-	jz	skip_hob
-	movl	%esi, GD_HOB_LIST(%edx)
+	/* Store HOB list */
+	movl	%esp, %edx
+	addl	$GD_HOB_LIST, %edx
+	movl	%esi, (%edx)
+#endif
 
-	/*
-	 * After fsp_init() returns, the stack has already been switched to a
-	 * place within system memory as defined by CONFIG_FSP_TEMP_RAM_ADDR.
-	 * Enlarge the size of malloc() pool before relocation since we have
-	 * plenty of memory now.
-	 */
-	subl	$CONFIG_FSP_SYS_MALLOC_F_LEN, %esp
-	movl	%esp, GD_MALLOC_BASE(%edx)
-skip_hob:
-#else
-	/* Store table pointer */
-	movl	%esi, GD_TABLE(%edx)
+	/* Setup first parameter to setup_gdt, pointer to global_data */
+	movl	%esp, %eax
+
+	/* Reserve space for global descriptor table */
+	subl	$X86_GDT_SIZE, %esp
+
+	/* Align temporary global descriptor table to 16-byte boundary */
+	andl	$0xfffffff0, %esp
+	movl	%esp, %ecx
+
+#if defined(CONFIG_SYS_MALLOC_F_LEN)
+	subl	$CONFIG_SYS_MALLOC_F_LEN, %esp
+	movl	%eax, %edx
+	addl	$GD_MALLOC_BASE, %edx
+	movl	%esp, (%edx)
 #endif
 	/* Store BIST */
-	movl	%ebp, GD_BIST(%edx)
+	movl	%eax, %edx
+	addl	$GD_BIST, %edx
+	movl	%ebp, (%edx)
+
+	/* Set second parameter to setup_gdt */
+	movl	%ecx, %edx
+
+	/* Setup global descriptor table so gd->xyz works */
+	call	setup_gdt
 
 	/* Set parameter to board_init_f() to boot flags */
 	post_code(POST_START_DONE)
 	xorl	%eax, %eax
 
-	/* Enter, U-Boot! */
+	/* Enter, U-boot! */
 	call	board_init_f
 
 	/* indicate (lack of) progress */
@@ -180,7 +174,37 @@ board_init_f_r_trampoline:
 	/* Stack grows down from top of SDRAM */
 	movl	%eax, %esp
 
-	/* See if we need to disable CAR */
+	/* Reserve space on stack for global data */
+	subl	$GENERATED_GBL_DATA_SIZE, %esp
+
+	/* Align global data to 16-byte boundary */
+	andl	$0xfffffff0, %esp
+
+	/* Setup first parameter to memcpy (and setup_gdt) */
+	movl	%esp, %eax
+
+	/* Setup second parameter to memcpy */
+	fs movl 0, %edx
+
+	/* Set third parameter to memcpy */
+	movl	$GENERATED_GBL_DATA_SIZE, %ecx
+
+	/* Copy global data from CAR to SDRAM stack */
+	call	memcpy
+
+	/* Reserve space for global descriptor table */
+	subl	$X86_GDT_SIZE, %esp
+
+	/* Align global descriptor table to 16-byte boundary */
+	andl	$0xfffffff0, %esp
+
+	/* Set second parameter to setup_gdt */
+	movl	%esp, %edx
+
+	/* Setup global descriptor table so gd->xyz works */
+	call	setup_gdt
+
+	/* Set if we need to disable CAR */
 .weak	car_uninit
 	movl	$car_uninit, %eax
 	cmpl	$0, %eax
@@ -188,7 +212,7 @@ board_init_f_r_trampoline:
 
 	call	car_uninit
 1:
-	/* Re-enter U-Boot by calling board_init_f_r() */
+	/* Re-enter U-Boot by calling board_init_f_r */
 	call	board_init_f_r
 
 die:
@@ -202,10 +226,9 @@ blank_idt_ptr:
 
 	.p2align	2	/* force 4-byte alignment */
 
-	/* Add a multiboot header so U-Boot can be loaded by GRUB2 */
 multiboot_header:
 	/* magic */
-	.long	0x1badb002
+	.long	0x1BADB002
 	/* flags */
 	.long	(1 << 16)
 	/* checksum */

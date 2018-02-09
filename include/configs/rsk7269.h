@@ -14,6 +14,10 @@
 #define CONFIG_CPU_SH7269	1
 #define CONFIG_RSK7269		1
 
+#ifndef _CONFIG_CMD_DEFAULT_H
+# include <config_cmd_default.h>
+#endif
+
 #define CONFIG_BAUDRATE		115200
 #define CONFIG_BOOTARGS		"console=ttySC7,115200"
 #define CONFIG_BOOTDELAY	3

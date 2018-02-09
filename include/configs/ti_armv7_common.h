@@ -17,6 +17,11 @@
 #ifndef __CONFIG_TI_ARMV7_COMMON_H__
 #define __CONFIG_TI_ARMV7_COMMON_H__
 
+/* Common define for many platforms. */
+#define CONFIG_OMAP
+#define CONFIG_OMAP_COMMON
+#define CONFIG_SYS_GENERIC_BOARD
+
 /*
  * We typically do not contain NOR flash.  In the cases where we do, we
  * undefine this later.
@@ -53,18 +58,12 @@
 	"fdt_addr_r=0x88000000\0" \
 	"rdaddr=0x88080000\0" \
 	"ramdisk_addr_r=0x88080000\0" \
-	"scriptaddr=0x80000000\0" \
-	"pxefile_addr_r=0x80100000\0" \
 	"bootm_size=0x10000000\0"
 
-#define DEFAULT_MMC_TI_ARGS \
-	"mmcdev=0\0" \
-	"mmcrootfstype=ext4 rootwait\0" \
-	"finduuid=part uuid mmc 0:2 uuid\0" \
-	"args_mmc=run finduuid;setenv bootargs console=${console} " \
-		"${optargs} " \
-		"root=PARTUUID=${uuid} rw " \
-		"rootfstype=${mmcrootfstype}\0"
+/*
+ * Default to a quick boot delay.
+ */
+#define CONFIG_BOOTDELAY		1
 
 /*
  * DDR information.  If the CONFIG_NR_DRAM_BANKS is not defined,
@@ -77,11 +76,8 @@
 #define CONFIG_NR_DRAM_BANKS		1
 #endif
 #define CONFIG_SYS_SDRAM_BASE		0x80000000
-
-#ifndef CONFIG_SYS_INIT_SP_ADDR
 #define CONFIG_SYS_INIT_SP_ADDR         (NON_SECURE_SRAM_END - \
 						GENERATED_GBL_DATA_SIZE)
-#endif
 
 /* Timer information. */
 #define CONFIG_SYS_PTV			2	/* Divisor: 2^(PTV+1) => 8 */
@@ -90,17 +86,37 @@
 #define CONFIG_I2C
 #define CONFIG_CMD_I2C
 #define CONFIG_SYS_I2C
+#define CONFIG_SYS_OMAP24_I2C_SPEED	100000
+#define CONFIG_SYS_OMAP24_I2C_SLAVE	1
+#define CONFIG_SYS_I2C_OMAP24XX
 
 /* MMC/SD IP block */
 #define CONFIG_MMC
 #define CONFIG_GENERIC_MMC
+#define CONFIG_OMAP_HSMMC
 #define CONFIG_CMD_MMC
 
 /* McSPI IP block */
 #define CONFIG_SPI
+#define CONFIG_OMAP3_SPI
 #define CONFIG_CMD_SPI
 
 /* GPIO block */
+#define CONFIG_OMAP_GPIO
+#define CONFIG_CMD_GPIO
+
+/*
+ * GPMC NAND block.  We support 1 device and the physical address to
+ * access CS0 at is 0x8000000.
+ */
+#ifdef CONFIG_NAND
+#define CONFIG_NAND_OMAP_GPMC
+#ifndef CONFIG_SYS_NAND_BASE
+#define CONFIG_SYS_NAND_BASE		0x8000000
+#endif
+#define CONFIG_SYS_MAX_NAND_DEVICE	1
+#define CONFIG_CMD_NAND
+#endif
 
 /*
  * The following are general good-enough settings for U-Boot.  We set a
@@ -117,6 +133,7 @@
 #define CONFIG_SYS_MALLOC_LEN	(16 << 20)
 #endif
 #define CONFIG_SYS_HUSH_PARSER
+#define CONFIG_SYS_PROMPT		"U-Boot# "
 #define CONFIG_SYS_CONSOLE_INFO_QUIET
 #define CONFIG_BAUDRATE			115200
 #define CONFIG_ENV_VARS_UBOOT_CONFIG	/* Strongly encouraged */
@@ -144,12 +161,22 @@
  * mtdparts, both for ease of use in U-Boot and for passing information
  * on to the Linux kernel.
  */
-#if defined(CONFIG_SPI_BOOT) || defined(CONFIG_NOR) || defined(CONFIG_NAND) || defined(CONFIG_NAND_DAVINCI)
+#if defined(CONFIG_SPI_BOOT) || defined(CONFIG_NOR) || defined(CONFIG_NAND)
 #define CONFIG_MTD_DEVICE		/* Required for mtdparts */
 #define CONFIG_CMD_MTDPARTS
 #endif
 
+/*
+ * For commands to use, we take the default list and add a few other
+ * useful commands.  Note that we must have set CONFIG_SYS_NO_FLASH
+ * prior to this include, in order to skip a few commands.  When we do
+ * have flash, if we expect these commands they must be enabled in that
+ * config.  If desired, a specific list of desired commands can be used
+ * instead.
+ */
+#include <config_cmd_default.h>
 #define CONFIG_CMD_ASKENV
+#define CONFIG_CMD_ECHO
 #define CONFIG_CMD_BOOTZ
 #define CONFIG_SUPPORT_RAW_INITRD
 
@@ -232,17 +259,13 @@
 #define CONFIG_SPL_LIBDISK_SUPPORT
 #define CONFIG_SPL_MMC_SUPPORT
 #define CONFIG_SPL_FAT_SUPPORT
-#define CONFIG_SPL_EXT_SUPPORT
 #endif
-
-#define CONFIG_SYS_THUMB_BUILD
 
 /* General parts of the framework, required. */
 #define CONFIG_SPL_I2C_SUPPORT
 #define CONFIG_SPL_LIBCOMMON_SUPPORT
 #define CONFIG_SPL_LIBGENERIC_SUPPORT
 #define CONFIG_SPL_SERIAL_SUPPORT
-#define CONFIG_SPL_POWER_SUPPORT
 #define CONFIG_SPL_GPIO_SUPPORT
 #define CONFIG_SPL_BOARD_INIT
 
@@ -255,34 +278,5 @@
 #define CONFIG_SYS_NAND_U_BOOT_START	CONFIG_SYS_TEXT_BASE
 #endif
 #endif /* !CONFIG_NOR_BOOT */
-
-/* Generic Environment Variables */
-
-#ifdef CONFIG_CMD_NET
-#define NETARGS \
-	"static_ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}" \
-		"::off\0" \
-	"nfsopts=nolock\0" \
-	"rootpath=/export/rootfs\0" \
-	"netloadimage=tftp ${loadaddr} ${bootfile}\0" \
-	"netloadfdt=tftp ${fdtaddr} ${fdtfile}\0" \
-	"netargs=setenv bootargs console=${console} " \
-		"${optargs} " \
-		"root=/dev/nfs " \
-		"nfsroot=${serverip}:${rootpath},${nfsopts} rw " \
-		"ip=dhcp\0" \
-	"netboot=echo Booting from network ...; " \
-		"setenv autoload no; " \
-		"dhcp; " \
-		"run netloadimage; " \
-		"run netloadfdt; " \
-		"run netargs; " \
-		"bootz ${loadaddr} - ${fdtaddr}\0"
-#else
-#define NETARGS ""
-#endif
-
-#include <config_distro_defaults.h>
-#define CONFIG_CMD_EXT4_WRITE
 
 #endif	/* __CONFIG_TI_ARMV7_COMMON_H__ */

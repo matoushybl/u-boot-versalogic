@@ -13,6 +13,7 @@
 #include <asm/gpio.h>
 #include "pinmux-config-cardhu.h"
 #include <i2c.h>
+#include <netdev.h>
 
 #define PMU_I2C_ADDRESS		0x2D
 #define MAX_I2C_RETRY		3
@@ -127,5 +128,10 @@ int tegra_pcie_board_init(void)
 	}
 
 	return 0;
+}
+
+int board_eth_init(bd_t *bis)
+{
+	return pci_eth_init(bis);
 }
 #endif /* PCI */

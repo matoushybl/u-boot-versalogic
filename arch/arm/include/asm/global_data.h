@@ -8,6 +8,10 @@
 #ifndef	__ASM_GBL_DATA_H
 #define __ASM_GBL_DATA_H
 
+#ifdef CONFIG_OMAP
+#include <asm/omap_boot.h>
+#endif
+
 /* Architecture-specific global data */
 struct arch_global_data {
 #if defined(CONFIG_FSL_ESDHC)
@@ -38,18 +42,13 @@ struct arch_global_data {
 	unsigned long long timer_reset_value;
 #if !(defined(CONFIG_SYS_ICACHE_OFF) && defined(CONFIG_SYS_DCACHE_OFF))
 	unsigned long tlb_addr;
-#if defined(CONFIG_SYS_FULL_VA)
-	unsigned long pmd_addr[CONFIG_SYS_PTL1_ENTRIES];
-#endif
 	unsigned long tlb_size;
 #endif
 
-#ifdef CONFIG_OMAP_COMMON
-	u32 omap_boot_device;
-	u32 omap_boot_mode;
-	u8 omap_ch_flags;
+#ifdef CONFIG_OMAP
+	struct omap_boot_parameters omap_boot_params;
 #endif
-#if defined(CONFIG_FSL_LSCH3) && defined(CONFIG_SYS_FSL_HAS_DP_DDR)
+#ifdef CONFIG_FSL_LSCH3
 	unsigned long mem2_clk;
 #endif
 };

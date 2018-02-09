@@ -3,8 +3,6 @@
  *
  * Copyright (C) 2011-2013 Marek Vasut <marex@denx.de>
  *
- * Copyright (C) 2014-2016 Freescale Semiconductor, Inc.
- *
  * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
@@ -30,6 +28,7 @@
 #endif
 
 #define	PS2KHZ(ps)	(1000000000UL / (ps))
+#define	WAIT_FOR_VSYNC_TIMEOUT	1000000
 
 static GraphicDevice panel;
 struct mxs_dma_desc desc;
@@ -93,7 +92,7 @@ static void mxs_lcd_init(GraphicDevice *panel,
 	mxs_set_lcdclk(panel->isaBase, PS2KHZ(mode->pixclock));
 
 	/* Restart the LCDIF block */
-	mxs_reset_block(&regs->hw_lcdif_ctrl_reg);
+	mxs_reset_block((struct mxs_register_32 *)&regs->hw_lcdif_ctrl);
 
 	switch (bpp) {
 	case 24:
@@ -166,25 +165,24 @@ static void mxs_lcd_init(GraphicDevice *panel,
 	writel(LCDIF_CTRL_RUN, &regs->hw_lcdif_ctrl_set);
 }
 
-void lcdif_power_down(void)
+void lcdif_power_down()
 {
 	struct mxs_lcdif_regs *regs = (struct mxs_lcdif_regs *)(panel.isaBase);
-	int timeout = 1000000;
+	int timeout = WAIT_FOR_VSYNC_TIMEOUT;
 
 #ifdef CONFIG_MX6
 	if (check_module_fused(MX6_MODULE_LCDIF))
 		return;
 #endif
-	writel(panel.frameAdrs, &regs->hw_lcdif_cur_buf_reg);
-	writel(panel.frameAdrs, &regs->hw_lcdif_next_buf_reg);
+	writel(panel.frameAdrs, &regs->hw_lcdif_cur_buf);
+	writel(panel.frameAdrs, &regs->hw_lcdif_next_buf);
 	writel(LCDIF_CTRL1_VSYNC_EDGE_IRQ, &regs->hw_lcdif_ctrl1_clr);
 	while (--timeout) {
-		if (readl(&regs->hw_lcdif_ctrl1_reg) &
-		    LCDIF_CTRL1_VSYNC_EDGE_IRQ)
+		if (readl(&regs->hw_lcdif_ctrl1) & LCDIF_CTRL1_VSYNC_EDGE_IRQ)
 			break;
 		udelay(1);
 	}
-	mxs_reset_block((struct mxs_register_32 *)&regs->hw_lcdif_ctrl_reg);
+	mxs_reset_block((struct mxs_register_32 *)&regs->hw_lcdif_ctrl);
 }
 
 void *video_hw_init(void)

@@ -1,5 +1,3 @@
-#include <linux/linkage.h>
-
 .macro ARM_MOD_BODY dividend, divisor, order, spare
 
 #if __LINUX_ARM_ARCH__ >= 5
@@ -71,7 +69,8 @@
 .endm
 
 	.align	5
-ENTRY(__modsi3)
+.globl __modsi3
+__modsi3:
 	cmp	r1, #0
 	beq	Ldiv0
 	rsbmi	r1, r1, #0			@ loops below use unsigned.
@@ -89,7 +88,7 @@ ENTRY(__modsi3)
 10:	cmp	ip, #0
 	rsbmi	r0, r0, #0
 	mov	pc, lr
-ENDPROC(__modsi3)
+
 
 Ldiv0:
 

@@ -10,8 +10,8 @@
 #include <common.h>
 #include <asm/io.h>
 #include <asm/errno.h>
-#include <asm/arch/sys_proto.h>
-#include <asm/arch/imx-regs.h>
+#include <asm/arch-mx6/sys_proto.h>
+#include <asm/arch-mx6/imx-regs.h>
 
 #define MAX_CPUS 4
 static struct src *src = (struct src *)SRC_BASE_ADDR;

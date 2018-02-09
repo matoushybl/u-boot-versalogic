@@ -82,16 +82,14 @@ struct fsl_secboot_img_hdr {
 	u32 psign;		/* signature offset */
 	u32 sign_len;		/* length of the signature in bytes */
 	union {
-		u32 psgtable;	/* ptr to SG table */
-#ifndef CONFIG_ESBC_ADDR_64BIT
-		u32 pimg;	/* ptr to ESBC client image */
-#endif
+		struct fsl_secboot_sg_table *psgtable;	/* ptr to SG table */
+		u8 *pimg;	/* ptr to ESBC client image */
 	};
 	union {
 		u32 sg_entries;	/* no of entries in SG table */
 		u32 img_size;	/* ESBC client image size in bytes */
 	};
-	u32 img_start;		/* ESBC client entry point */
+	ulong img_start;		/* ESBC client entry point */
 	u32 sg_flag;		/* Scatter gather flag */
 	u32 uid_flag;
 	u32 fsl_uid_0;
@@ -99,12 +97,7 @@ struct fsl_secboot_img_hdr {
 	u32 reserved1[2];
 	u32 fsl_uid_1;
 	u32 oem_uid_1;
-	union {
-		u32 reserved2[2];
-#ifdef CONFIG_ESBC_ADDR_64BIT
-		u64 pimg64;	/* 64 bit pointer to ESBC Image */
-#endif
-	};
+	u32 reserved2[2];
 	u32 ie_flag;
 	u32 ie_key_sel;
 };
@@ -140,7 +133,7 @@ struct srk_table {
  */
 struct fsl_secboot_sg_table {
 	u32 len;		/* length of the segment in bytes */
-	u32 src_addr;		/* ptr to the data segment */
+	ulong src_addr;		/* ptr to the data segment */
 };
 #else
 /*
@@ -153,8 +146,8 @@ struct fsl_secboot_sg_table {
 struct fsl_secboot_sg_table {
 	u32 len;
 	u32 trgt_id;
-	u32 src_addr;
-	u32 dst_addr;
+	ulong src_addr;
+	ulong dst_addr;
 };
 #endif
 
@@ -169,7 +162,7 @@ struct fsl_secboot_sg_table {
  */
 struct fsl_secboot_img_priv {
 	uint32_t hdr_location;
-	u32 ie_addr;
+	ulong ie_addr;
 	u32 key_len;
 	struct fsl_secboot_img_hdr hdr;
 
@@ -193,18 +186,14 @@ struct fsl_secboot_img_priv {
 						 */
 
 	struct fsl_secboot_sg_table sgtbl[MAX_SG_ENTRIES];	/* SG table */
-	uintptr_t ehdrloc;	/* ESBC Header location */
-	uintptr_t img_addr;	/* ESBC Image Location */
-	uint32_t img_size;	/* ESBC Image Size */
+	u32 ehdrloc;		/* ESBC client location */
 };
 
-int fsl_secboot_validate(uintptr_t haddr, char *arg_hash_str,
-	uintptr_t img_loc);
+int fsl_secboot_validate(cmd_tbl_t *cmdtp, int flag, int argc,
+		char * const argv[]);
 int fsl_secboot_blob_encap(cmd_tbl_t *cmdtp, int flag, int argc,
 	char * const argv[]);
 int fsl_secboot_blob_decap(cmd_tbl_t *cmdtp, int flag, int argc,
 	char * const argv[]);
 
-int fsl_check_boot_mode_secure(void);
-int fsl_setenv_chain_of_trust(void);
 #endif

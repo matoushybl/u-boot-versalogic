@@ -6,13 +6,7 @@
 #
 
 obj-y	:= reset.o
-ifeq ($(CONFIG_TIMER),)
 obj-y	+= timer.o
-else
-ifdef CONFIG_SPL_BUILD
-obj-y	+= timer.o
-endif
-endif
 obj-y	+= utils.o
 
 ifneq ($(CONFIG_OMAP44XX)$(CONFIG_OMAP54XX),)
@@ -32,7 +26,9 @@ ifeq ($(CONFIG_SYS_DCACHE_OFF),)
 obj-y	+= omap-cache.o
 endif
 
+ifeq ($(CONFIG_OMAP34XX),)
 obj-y	+= boot-common.o
+endif
 obj-y	+= lowlevel_init.o
 
 obj-y	+= mem-common.o

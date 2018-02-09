@@ -6,10 +6,10 @@
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
-#include <asm/arch/clock.h>
-#include <asm/arch/imx-regs.h>
-#include <asm/arch/iomux.h>
-#include <asm/arch/mx6-pins.h>
+#include <asm/arch-mx6/clock.h>
+#include <asm/arch-mx6/imx-regs.h>
+#include <asm/arch-mx6/iomux.h>
+#include <asm/arch-mx6/mx6-pins.h>
 #include <asm/errno.h>
 #include <asm/gpio.h>
 #include <asm/imx-common/mxc_i2c.h>
@@ -20,15 +20,15 @@
 #include <fsl_esdhc.h>
 #include <miiphy.h>
 #include <netdev.h>
-#include <asm/arch/mxc_hdmi.h>
-#include <asm/arch/crm_regs.h>
+#include <asm/arch-mx6/mxc_hdmi.h>
+#include <asm/arch-mx6/crm_regs.h>
 #include <asm/io.h>
-#include <asm/arch/sys_proto.h>
+#include <asm/arch-mx6/sys_proto.h>
 #include <i2c.h>
 #include <power/pmic.h>
 #include <power/pfuze100_pmic.h>
 #include "../common/pfuze.h"
-#include <asm/arch/mx6-ddr.h>
+#include <asm/arch-mx6/mx6-ddr.h>
 #include <usb.h>
 #ifdef CONFIG_CMD_SATA
 #include <asm/imx-common/sata.h>
@@ -843,6 +843,44 @@ static const struct boot_mode board_boot_modes[] = {
 };
 #endif
 
+int mmc_map_to_kernel_blk(int dev_no)
+{
+        return dev_no + 1;
+}
+
+int check_mmc_autodetect(void)
+{
+        char *autodetect_str = getenv("mmcautodetect");
+
+        if ((autodetect_str != NULL) &&
+                (strcmp(autodetect_str, "yes") == 0)) {
+                return 1;
+        }
+
+        return 0;
+}
+
+
+void board_late_mmc_env_init(void)
+{
+        char cmd[32];
+        char mmcblk[32];
+        u32 dev_no = mmc_get_env_devno();
+
+        if (!check_mmc_autodetect())
+                return;
+
+        setenv_ulong("mmcdev", dev_no);
+
+        /* Set mmcblk env */
+        sprintf(mmcblk, "/dev/mmcblk%dp2 rootwait rw",
+                mmc_map_to_kernel_blk(dev_no));
+        setenv("mmcroot", mmcblk);
+
+        sprintf(cmd, "mmc dev %d", dev_no);
+        run_command(cmd, 0);
+}
+
 int board_late_init(void)
 {
 
@@ -928,7 +966,13 @@ int check_recovery_cmd_file(void)
     int button_pressed = 0;
     int recovery_mode = 0;
 
+#ifdef CONFIG_BCB_SUPPORT
+    recovery_mode = recovery_check_and_clean_command();
+#endif
+
+/*
     recovery_mode = recovery_check_and_clean_flag();
+*/
 
     /* Check Recovery Combo Button press or not. */
 	imx_iomux_v3_setup_multiple_pads(recovery_key_pads,
@@ -1203,4 +1247,9 @@ void board_init_f(ulong dummy)
 	/* load/boot image from boot device */
 	board_init_r(NULL, 0);
 }
+
+void reset_cpu(ulong addr)
+{
+}
+
 #endif

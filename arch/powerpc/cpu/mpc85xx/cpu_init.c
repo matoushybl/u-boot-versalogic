@@ -19,27 +19,16 @@
 #include <asm/io.h>
 #include <asm/cache.h>
 #include <asm/mmu.h>
-#include <fsl_errata.h>
+#include <asm/fsl_errata.h>
 #include <asm/fsl_law.h>
 #include <asm/fsl_serdes.h>
 #include <asm/fsl_srio.h>
-#ifdef CONFIG_FSL_CORENET
-#include <asm/fsl_portals.h>
-#include <asm/fsl_liodn.h>
-#endif
 #include <fsl_usb.h>
 #include <hwconfig.h>
 #include <linux/compiler.h>
 #include "mp.h"
-#ifdef CONFIG_CHAIN_OF_TRUST
-#include <fsl_validate.h>
-#endif
 #ifdef CONFIG_FSL_CAAM
 #include <fsl_sec.h>
-#endif
-#if defined(CONFIG_SECURE_BOOT) && defined(CONFIG_FSL_CORENET)
-#include <asm/fsl_pamu.h>
-#include <fsl_secboot_err.h>
 #endif
 #ifdef CONFIG_SYS_QE_FMAN_FW_IN_NAND
 #include <nand.h>
@@ -48,7 +37,7 @@
 
 #include "../../../../drivers/block/fsl_sata.h"
 #ifdef CONFIG_U_QE
-#include <fsl_qe.h>
+#include "../../../../drivers/qe/qe.h"
 #endif
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -436,7 +425,8 @@ void fsl_erratum_a007212_workaround(void)
 ulong cpu_init_f(void)
 {
 	extern void m8560_cpm_reset (void);
-#ifdef CONFIG_SYS_DCSRBAR_PHYS
+#if defined(CONFIG_SYS_DCSRBAR_PHYS) || \
+	(defined(CONFIG_SECURE_BOOT) && defined(CONFIG_FSL_CORENET))
 	ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
 #endif
 #if defined(CONFIG_SECURE_BOOT)
@@ -468,6 +458,12 @@ ulong cpu_init_f(void)
 #if defined(CONFIG_SYS_CPC_REINIT_F)
 	disable_cpc_sram();
 #endif
+
+#if defined(CONFIG_FSL_CORENET)
+	/* Put PAMU in bypass mode */
+	out_be32(&gur->pamubypenr, FSL_CORENET_PAMU_BYPASS);
+#endif
+
 #endif
 
 #ifdef CONFIG_CPM2
@@ -792,13 +788,6 @@ int cpu_init_r(void)
 		spin_table_compat = 1;
 #endif
 
-#ifdef CONFIG_FSL_CORENET
-	set_liodns();
-#ifdef CONFIG_SYS_DPAA_QBMAN
-	setup_portals();
-#endif
-#endif
-
 	l2cache_init();
 #if defined(CONFIG_RAMBOOT_PBL)
 	disable_cpc_sram();
@@ -951,11 +940,6 @@ int cpu_init_r(void)
 	fman_enet_init();
 #endif
 
-#if defined(CONFIG_SECURE_BOOT) && defined(CONFIG_FSL_CORENET)
-	if (pamu_init() < 0)
-		fsl_secboot_handle_error(ERROR_ESBC_PAMU_INIT);
-#endif
-
 #ifdef CONFIG_FSL_CAAM
 	sec_init();
 #endif
@@ -1025,14 +1009,3 @@ void cpu_secondary_init_r(void)
 	qe_reset();
 #endif
 }
-
-#ifdef CONFIG_BOARD_LATE_INIT
-int board_late_init(void)
-{
-#ifdef CONFIG_CHAIN_OF_TRUST
-	fsl_setenv_chain_of_trust();
-#endif
-
-	return 0;
-}
-#endif

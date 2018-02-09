@@ -832,7 +832,7 @@ static struct fotg210_chip controller = {
 	},
 };
 
-int usb_gadget_handle_interrupts(int index)
+int usb_gadget_handle_interrupts(void)
 {
 	struct fotg210_chip *chip = &controller;
 	struct fotg210_regs *regs = chip->regs;

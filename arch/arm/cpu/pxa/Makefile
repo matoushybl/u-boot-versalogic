@@ -13,4 +13,3 @@ obj-$(CONFIG_CPU_PXA27X)	+= pxa2xx.o
 obj-y	+= cpuinfo.o
 obj-y	+= timer.o
 obj-y	+= usb.o
-obj-y	+= relocate.o

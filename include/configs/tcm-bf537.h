@@ -1,5 +1,5 @@
 /*
- * U-Boot - Configuration file for TCM-BF537 board
+ * U-boot - Configuration file for TCM-BF537 board
  */
 
 #ifndef __CONFIG_TCM_BF537_H__
@@ -71,6 +71,9 @@
 #define CONFIG_NETCONSOLE	1
 #endif
 #define CONFIG_HOSTNAME		tcm-bf537
+/* Uncomment next line to use fixed MAC address */
+/* #define CONFIG_ETHADDR	02:80:ad:20:31:e8 */
+#define CONFIG_LIB_RAND
 
 /*
  * Flash Settings

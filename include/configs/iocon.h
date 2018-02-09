@@ -20,12 +20,10 @@
 #define CONFIG_IDENT_STRING	" iocon 0.06"
 #include "amcc-common.h"
 
-/* Reclaim some space. */
-#undef CONFIG_SYS_LONGHELP
-
 #define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_BOARD_EARLY_INIT_R
 #define CONFIG_LAST_STAGE_INIT
+#define CONFIG_SYS_GENERIC_BOARD
 
 #define CONFIG_SYS_CLK_FREQ	33333333 /* external frequency to pll   */
 
@@ -36,8 +34,12 @@
 #define PLLMR1_DEFAULT PLLMR1_266_133_66
 
 #undef CONFIG_ZERO_BOOTDELAY_CHECK	/* ignore keypress on bootdelay==0 */
+#define CONFIG_AUTOBOOT_KEYED		/* use key strings to stop autoboot */
+#define CONFIG_AUTOBOOT_STOP_STR " "
 
 /* new uImage format support */
+#define CONFIG_FIT
+#define CONFIG_FIT_VERBOSE	/* enable fit_format_{error,warning}() */
 #define CONFIG_FIT_DISABLE_SHA256
 
 #define CONFIG_ENV_IS_IN_FLASH	/* use FLASH for environment vars */
@@ -64,8 +66,10 @@
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_FPGAD
 #undef CONFIG_CMD_EEPROM
+#undef CONFIG_CMD_ELF
 #undef CONFIG_CMD_I2C
 #undef CONFIG_CMD_IRQ
+#undef CONFIG_CMD_NFS
 
 /*
  * SDRAM configuration (please see cpu/ppc/sdram.[ch])

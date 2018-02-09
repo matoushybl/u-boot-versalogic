@@ -1,5 +1,5 @@
 /*
- * U-Boot - Configuration file for Cirrus Logic EDB93xx boards
+ * U-boot - Configuration file for Cirrus Logic EDB93xx boards
  */
 
 #ifndef __CONFIG_H
@@ -25,7 +25,6 @@
 #error "no board defined"
 #endif
 
-
 /* Initial environment and monitor configuration options. */
 #define CONFIG_BOOTDELAY		2
 #define CONFIG_CMDLINE_TAG		1
@@ -40,7 +39,7 @@
 
 #define CONFIG_SYS_LDSCRIPT	"board/cirrus/edb93xx/u-boot.lds"
 
-#undef CONFIG_SYS_PROMPT
+
 #ifdef CONFIG_EDB9301
 #define CONFIG_EP9301
 #define CONFIG_MACH_TYPE		MACH_TYPE_EDB9301
@@ -92,6 +91,11 @@
 #undef CONFIG_USE_IRQ				/* Don't need IRQ/FIQ */
 
 /* Monitor configuration */
+#include <config_cmd_default.h>
+#undef CONFIG_CMD_FPGA
+#undef CONFIG_CMD_SETGETDCR
+#undef CONFIG_CMD_XIMG
+
 #undef CONFIG_CMD_DATE
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_JFFS2
@@ -138,6 +142,7 @@
 #define CONFIG_MII_SUPPRESS_PREAMBLE
 #define CONFIG_MII
 #define CONFIG_PHY_ADDR		1
+#define CONFIG_NET_MULTI
 #undef CONFIG_NETCONSOLE
 
 /* SDRAM configuration */

@@ -28,7 +28,6 @@
 
 
 #include <common.h>
-#include <console.h>
 #include <exports.h>
 
 DECLARE_GLOBAL_DATA_PTR;

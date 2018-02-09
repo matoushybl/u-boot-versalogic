@@ -12,7 +12,7 @@ import terminal
 
 # Series-xxx tags that we understand
 valid_series = ['to', 'cc', 'version', 'changes', 'prefix', 'notes', 'name',
-                'cover_cc', 'process_log']
+                'cover-cc', 'process_log']
 
 class Series(dict):
     """Holds information about a patch series, including all tags.
@@ -69,10 +69,7 @@ class Series(dict):
 
         # Otherwise just set the value
         elif name in valid_series:
-            if name=="notes":
-                self[name] = [value]
-            else:
-                self[name] = value
+            self[name] = value
         else:
             raise ValueError("In %s: line '%s': Unknown 'Series-%s': valid "
                         "options are %s" % (commit.hash, line, name,
@@ -257,12 +254,6 @@ class Series(dict):
         Return:
             Patch string, like 'RFC PATCH v5' or just 'PATCH'
         """
-        git_prefix = gitutil.GetDefaultSubjectPrefix()
-        if git_prefix:
-	    git_prefix = '%s][' % git_prefix
-        else:
-            git_prefix = ''
-
         version = ''
         if self.get('version'):
             version = ' v%s' % self['version']
@@ -271,4 +262,4 @@ class Series(dict):
         prefix = ''
         if self.get('prefix'):
             prefix = '%s ' % self['prefix']
-        return '%s%sPATCH%s' % (git_prefix, prefix, version)
+        return '%sPATCH%s' % (prefix, version)

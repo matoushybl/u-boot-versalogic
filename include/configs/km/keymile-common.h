@@ -13,10 +13,13 @@
 /*
  * Command line configuration.
  */
+#include <config_cmd_default.h>
+
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_DEFAULTENV_VARS
 #define CONFIG_CMD_GREPENV
+#define CONFIG_CMD_ECHO
 #define CONFIG_CMD_IMMAP
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_PING
@@ -24,6 +27,7 @@
 #define CONFIG_CMD_I2C
 #define CONFIG_CMD_JFFS2
 #define CONFIG_CMD_MTDPARTS
+#define CONFIG_CMD_SETEXPR
 
 #undef	CONFIG_WATCHDOG		/* disable platform specific watchdog */
 
@@ -55,10 +59,6 @@
 
 #define CONFIG_LOADS_ECHO
 #define CONFIG_SYS_LOADS_BAUD_CHANGE
-
-#define CONFIG_AUTOBOOT_KEYED
-#define CONFIG_AUTOBOOT_PROMPT "Hit <SPACE> key to stop autoboot in %2ds\n"
-#define CONFIG_AUTOBOOT_STOP_STR        " "
 
 /* Support the IVM EEprom */
 #define	CONFIG_SYS_IVM_EEPROM_ADR	0x50
@@ -141,9 +141,8 @@
  * - 'release': for a standalone system		kernel/rootfs from flash
  */
 #define CONFIG_KM_DEF_ENV_BOOTTARGETS					\
-	"subbootcmds=ubiattach ubicopy checkfdt cramfsloadfdt "		\
-		"set_fdthigh cramfsloadkernel flashargs add_default "	\
-		"addpanic boot\0"					\
+	"subbootcmds=ubiattach ubicopy cramfsloadfdt set_fdthigh "	\
+		"cramfsloadkernel flashargs add_default addpanic boot\0"\
 	"develop="							\
 		"tftp 200000 scripts/develop-${arch}.txt && "		\
 		"env import -t 200000 ${filesize} && "			\

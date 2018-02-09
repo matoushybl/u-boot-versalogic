@@ -268,6 +268,11 @@ smc_putc(const char c)
 	volatile cpm8xx_t	*cpmp = &(im->im_cpm);
 	volatile serialbuffer_t	*rtx;
 
+#ifdef CONFIG_MODEM_SUPPORT
+	if (gd->be_quiet)
+		return;
+#endif
+
 	if (c == '\n')
 		smc_putc ('\r');
 
@@ -522,6 +527,11 @@ scc_putc(const char c)
 	volatile immap_t	*im = (immap_t *)CONFIG_SYS_IMMR;
 	volatile cpm8xx_t	*cpmp = &(im->im_cpm);
 
+#ifdef CONFIG_MODEM_SUPPORT
+	if (gd->be_quiet)
+		return;
+#endif
+
 	if (c == '\n')
 		scc_putc ('\r');
 
@@ -626,6 +636,18 @@ void mpc8xx_serial_initialize(void)
 	serial_register(&serial_scc_device);
 #endif
 }
+
+#ifdef CONFIG_MODEM_SUPPORT
+void disable_putc(void)
+{
+	gd->be_quiet = 1;
+}
+
+void enable_putc(void)
+{
+	gd->be_quiet = 0;
+}
+#endif
 
 #if defined(CONFIG_CMD_KGDB)
 

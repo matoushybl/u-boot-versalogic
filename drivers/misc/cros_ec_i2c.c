@@ -28,7 +28,7 @@ static int cros_ec_i2c_command(struct udevice *udev, uint8_t cmd,
 			       int cmd_version, const uint8_t *dout,
 			       int dout_len, uint8_t **dinp, int din_len)
 {
-	struct cros_ec_dev *dev = dev_get_uclass_priv(udev);
+	struct cros_ec_dev *dev = udev->uclass_priv;
 	/* version8, cmd8, arglen8, out8[dout_len], csum8 */
 	int out_bytes = dout_len + 4;
 	/* response8, arglen8, in8[din_len], checksum8 */
@@ -139,12 +139,12 @@ static struct dm_cros_ec_ops cros_ec_ops = {
 };
 
 static const struct udevice_id cros_ec_ids[] = {
-	{ .compatible = "google,cros-ec-i2c" },
+	{ .compatible = "google,cros-ec" },
 	{ }
 };
 
 U_BOOT_DRIVER(cros_ec_i2c) = {
-	.name		= "cros_ec_i2c",
+	.name		= "cros_ec",
 	.id		= UCLASS_CROS_EC,
 	.of_match	= cros_ec_ids,
 	.probe		= cros_ec_probe,

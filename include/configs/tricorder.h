@@ -16,10 +16,7 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#define CONFIG_SYS_CACHELINE_SIZE	64
-
 /* High Level Configuration Options */
-#define CONFIG_SYS_THUMB_BUILD
 #define CONFIG_OMAP			/* in a TI OMAP core */
 #define CONFIG_OMAP_COMMON
 /* Common ARM Erratas */
@@ -41,6 +38,7 @@
 #include <asm/arch/cpu.h>		/* get chip and board defs */
 #include <asm/arch/omap.h>
 
+#define CONFIG_SYS_GENERIC_BOARD
 
 /* Display CPU and Board information */
 #define CONFIG_DISPLAY_CPUINFO
@@ -88,6 +86,7 @@
 #define STATUS_LED_PERIOD2		(CONFIG_SYS_HZ / 2)
 
 /* NS16550 Configuration */
+#define CONFIG_SYS_NS16550
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	(-4)
 #define CONFIG_SYS_NS16550_CLK		48000000 /* 48MHz (APLL96/2) */
@@ -114,6 +113,7 @@
  
 
 /* EEPROM */
+#define CONFIG_SYS_I2C_MULTI_EEPROMS
 #define CONFIG_CMD_EEPROM
 #define CONFIG_SYS_I2C_EEPROM_ADDR_LEN	2
 #define CONFIG_SYS_EEPROM_BUS_NUM	1
@@ -149,6 +149,8 @@
 #define CONFIG_SYS_NAND_MAX_ECCPOS	56
 
 /* commands to include */
+#include <config_cmd_default.h>
+
 #define CONFIG_CMD_EXT2			/* EXT2 Support */
 #define CONFIG_CMD_FAT			/* FAT support */
 #define CONFIG_CMD_I2C			/* I2C serial bus support */
@@ -160,6 +162,10 @@
 #define CONFIG_CMD_UBIFS		/* UBIFS commands */
 #define CONFIG_LZO			/* LZO is needed for UBIFS */
 
+#undef CONFIG_CMD_NET
+#undef CONFIG_CMD_NFS
+#undef CONFIG_CMD_FPGA			/* FPGA configuration Support */
+#undef CONFIG_CMD_IMI			/* iminfo */
 #undef CONFIG_CMD_JFFS2			/* JFFS2 Support */
 
 /* needed for ubi */
@@ -284,6 +290,7 @@
 #define CONFIG_SYS_HUSH_PARSER		/* use "hush" command parser */
 #define CONFIG_CMDLINE_EDITING		/* enable cmdline history */
 #define CONFIG_AUTO_COMPLETE
+#define CONFIG_SYS_PROMPT		"OMAP3 Tricorder # "
 #define CONFIG_SYS_CBSIZE		512	/* Console I/O Buffer Size */
 /* Print Buffer Size */
 #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \

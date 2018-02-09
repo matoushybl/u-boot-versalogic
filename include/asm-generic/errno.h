@@ -1,5 +1,5 @@
 /*
- * U-Boot - errno.h Error number defines
+ * U-boot - errno.h Error number defines
  *
  * Copyright (c) 2005-2007 Analog Devices Inc.
  *

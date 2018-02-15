@@ -27,7 +27,7 @@
 #include <i2c.h>
 #include <power/pmic.h>
 #include <power/pfuze100_pmic.h>
-#include "../common/pfuze.h"
+#include "../../freescale/common/pfuze.h"
 #include <asm/arch/mx6-ddr.h>
 #include <usb.h>
 #ifdef CONFIG_FSL_FASTBOOT

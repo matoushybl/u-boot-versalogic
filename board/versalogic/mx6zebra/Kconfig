@@ -4,7 +4,7 @@ config SYS_BOARD
 	default "mx6zebra"
 
 config SYS_VENDOR
-	default "freescale"
+	default "versalogic"
 
 config SYS_CONFIG_NAME
 	default "mx6zebra"

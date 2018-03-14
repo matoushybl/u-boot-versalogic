@@ -365,7 +365,6 @@ int board_mmc_get_env_dev(int devno)
 {
 	return devno - 1;
 }
-
 int mmc_map_to_kernel_blk(int devno)
 {
 	return devno + 1;

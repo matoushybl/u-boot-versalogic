@@ -27,7 +27,7 @@
 #include <i2c.h>
 #include <power/pmic.h>
 #include <power/pfuze100_pmic.h>
-#include "../../freescale/common/pfuze.h"
+#include "../common/pfuze.h"
 #include <asm/arch/mx6-ddr.h>
 #include <usb.h>
 #ifdef CONFIG_FSL_FASTBOOT
@@ -67,15 +67,12 @@ DECLARE_GLOBAL_DATA_PTR;
 	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS |	\
 	PAD_CTL_ODE | PAD_CTL_SRE_FAST)
 
-#define EPDC_PAD_CTRL    (PAD_CTL_PKE | PAD_CTL_SPEED_MED |	\
-	PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
-
 #define OTG_ID_PAD_CTRL (PAD_CTL_PKE | PAD_CTL_PUE |		\
 	PAD_CTL_PUS_47K_UP  | PAD_CTL_SPEED_LOW |		\
 	PAD_CTL_DSE_80ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
 
 
-//#define I2C_PMIC	1
+#define I2C_PMIC	2
 
 #define I2C_PAD MUX_PAD_CTRL(I2C_PAD_CTRL)
 
@@ -100,8 +97,6 @@ static iomux_v3_cfg_t const uart1_pads[] = {
 static iomux_v3_cfg_t const uart3_pads[] = {
         MX6_PAD_EIM_D24__UART3_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
         MX6_PAD_EIM_D25__UART3_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
-        MX6_PAD_EIM_D23__UART3_CTS_B | MUX_PAD_CTRL(UART_PAD_CTRL),
-        MX6_PAD_EIM_EB3__UART3_RTS_B | MUX_PAD_CTRL(UART_PAD_CTRL),
 };
 
 
@@ -227,11 +222,9 @@ static iomux_v3_cfg_t const ecspi1_pads[] = {
         MX6_PAD_EIM_D16__ECSPI1_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
         MX6_PAD_EIM_D17__ECSPI1_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
         MX6_PAD_EIM_D18__ECSPI1_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
-        MX6_PAD_GPIO_19__ECSPI1_RDY | MUX_PAD_CTRL(SPI_PAD_CTRL),
         MX6_PAD_EIM_EB2__GPIO2_IO30 | MUX_PAD_CTRL(NO_PAD_CTRL),
         /*MX6_PAD_EIM_EB2__ECSPI1_SS0 | MUX_PAD_CTRL(SPI_PAD_CTRL),*/
 };
-
 
 static iomux_v3_cfg_t const ecspi3_pads[] = {
 	MX6_PAD_DISP0_DAT0__ECSPI3_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
@@ -240,7 +233,6 @@ static iomux_v3_cfg_t const ecspi3_pads[] = {
 	MX6_PAD_DISP0_DAT3__ECSPI3_SS0 | MUX_PAD_CTRL(SPI_PAD_CTRL),
 	MX6_PAD_DISP0_DAT4__ECSPI3_SS1 | MUX_PAD_CTRL(SPI_PAD_CTRL),
 	MX6_PAD_DISP0_DAT5__ECSPI3_SS2 | MUX_PAD_CTRL(SPI_PAD_CTRL),
-	MX6_PAD_DISP0_DAT7__ECSPI3_RDY | MUX_PAD_CTRL(SPI_PAD_CTRL),
 };
 static void setup_spi(void)
 {
@@ -365,6 +357,7 @@ int board_mmc_get_env_dev(int devno)
 {
 	return devno - 1;
 }
+
 int mmc_map_to_kernel_blk(int devno)
 {
 	return devno + 1;
@@ -800,8 +793,10 @@ int board_init(void)
 #ifdef CONFIG_MXC_SPI
 	setup_spi();
 #endif
+/*
 	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1); 
         setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);
+*/
 	setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info3);
 
 #ifdef CONFIG_USB_EHCI_MX6
@@ -815,6 +810,7 @@ int board_init(void)
 	return 0;
 }
 
+/*
 int power_init_board(void)
 {
 	return 0;
@@ -823,6 +819,7 @@ void ldo_mode_set(int ldo_bypass)
 {
 	return 0;
 }
+*/
 
 #ifdef CONFIG_CMD_BMODE
 static const struct boot_mode board_boot_modes[] = {
@@ -867,37 +864,196 @@ int checkboard(void)
 	return 0;
 }
 
+int power_init_board(void)
+{
+        struct pmic *pfuze;
+        unsigned int reg;
+        int ret;
+
+        pfuze = pfuze_common_init(I2C_PMIC);
+        if (!pfuze)
+                return -ENODEV;
+
+        if (is_mx6dqp())
+                ret = pfuze_mode_init(pfuze, APS_APS);
+        else
+                ret = pfuze_mode_init(pfuze, APS_PFM);
+
+        if (ret < 0)
+                return ret;
+
+        if (is_mx6dqp()) {
+                /* set SW1C staby volatage 1.075V*/
+                pmic_reg_read(pfuze, PFUZE100_SW1CSTBY, &reg);
+                reg &= ~0x3f;
+                reg |= 0x1f;
+                pmic_reg_write(pfuze, PFUZE100_SW1CSTBY, reg);
+
+                /* set SW1C/VDDSOC step ramp up time to from 16us to 4us/25mV */
+                pmic_reg_read(pfuze, PFUZE100_SW1CCONF, &reg);
+                reg &= ~0xc0;
+                reg |= 0x40;
+                pmic_reg_write(pfuze, PFUZE100_SW1CCONF, reg);
+
+                /* set SW2/VDDARM staby volatage 0.975V*/
+                pmic_reg_read(pfuze, PFUZE100_SW2STBY, &reg);
+                reg &= ~0x3f;
+                reg |= 0x17;
+                pmic_reg_write(pfuze, PFUZE100_SW2STBY, reg);
+
+                /* set SW2/VDDARM step ramp up time to from 16us to 4us/25mV */
+                pmic_reg_read(pfuze, PFUZE100_SW2CONF, &reg);
+                reg &= ~0xc0;
+                reg |= 0x40;
+                pmic_reg_write(pfuze, PFUZE100_SW2CONF, reg);
+        } else {
+                /* set SW1AB staby volatage 0.975V*/
+                pmic_reg_read(pfuze, PFUZE100_SW1ABSTBY, &reg);
+                reg &= ~0x3f;
+                reg |= 0x1b;
+                pmic_reg_write(pfuze, PFUZE100_SW1ABSTBY, reg);
+
+                /* set SW1AB/VDDARM step ramp up time from 16us to 4us/25mV */
+                pmic_reg_read(pfuze, PFUZE100_SW1ABCONF, &reg);
+                reg &= ~0xc0;
+                reg |= 0x40;
+                pmic_reg_write(pfuze, PFUZE100_SW1ABCONF, reg);
+
+                /* set SW1C staby volatage 0.975V*/
+                pmic_reg_read(pfuze, PFUZE100_SW1CSTBY, &reg);
+                reg &= ~0x3f;
+                reg |= 0x1b;
+                pmic_reg_write(pfuze, PFUZE100_SW1CSTBY, reg);
+
+                /* set SW1C/VDDSOC step ramp up time to from 16us to 4us/25mV */
+                pmic_reg_read(pfuze, PFUZE100_SW1CCONF, &reg);
+                reg &= ~0xc0;
+                reg |= 0x40;
+                pmic_reg_write(pfuze, PFUZE100_SW1CCONF, reg);
+        }
+
+        return 0;
+}
+
+
+#ifdef CONFIG_LDO_BYPASS_CHECK
+void ldo_mode_set(int ldo_bypass)
+{
+        unsigned int value;
+        int is_400M;
+        unsigned char vddarm;
+        struct pmic *p = pmic_get("PFUZE100");
+
+        if (!p) {
+                printf("No PMIC found!\n");
+                return;
+        }
+
+        /* switch to ldo_bypass mode , boot on 800Mhz */
+        if (ldo_bypass) {
+                prep_anatop_bypass();
+                if (is_mx6dqp()) {
+                        /* decrease VDDARM for 400Mhz DQP:1.1V*/
+                        pmic_reg_read(p, PFUZE100_SW2VOL, &value);
+                        value &= ~0x3f;
+                        value |= 0x1c;
+                        pmic_reg_write(p, PFUZE100_SW2VOL, value);
+                } else {
+                        /* decrease VDDARM for 400Mhz DQ:1.1V, DL:1.275V */
+                        pmic_reg_read(p, PFUZE100_SW1ABVOL, &value);
+                        value &= ~0x3f;
+                        if (is_cpu_type(MXC_CPU_MX6DL))
+                                value |= 0x27;
+                        else
+                                value |= 0x20;
+
+                        pmic_reg_write(p, PFUZE100_SW1ABVOL, value);
+                }
+                /* increase VDDSOC to 1.3V */
+                pmic_reg_read(p, PFUZE100_SW1CVOL, &value);
+                value &= ~0x3f;
+                value |= 0x28;
+                pmic_reg_write(p, PFUZE100_SW1CVOL, value);
+
+                /*
+                 * MX6Q/DQP:
+                 * VDDARM:1.15V@800M; VDDSOC:1.175V@800M
+                 * VDDARM:0.975V@400M; VDDSOC:1.175V@400M
+                 * MX6DL:
+                 * VDDARM:1.175V@800M; VDDSOC:1.175V@800M
+                 * VDDARM:1.075V@400M; VDDSOC:1.175V@400M
+                 */
+                is_400M = set_anatop_bypass(2);
+                if (is_mx6dqp()) {
+                        pmic_reg_read(p, PFUZE100_SW2VOL, &value);
+                        value &= ~0x3f;
+                        if (is_400M)
+                                value |= 0x17;
+                        else
+                                value |= 0x1e;
+                        pmic_reg_write(p, PFUZE100_SW2VOL, value);
+                }
+
+                if (is_400M) {
+                        if (is_cpu_type(MXC_CPU_MX6DL))
+                                vddarm = 0x1f;
+                        else
+                                vddarm = 0x1b;
+                } else {
+                        if (is_cpu_type(MXC_CPU_MX6DL))
+                                vddarm = 0x23;
+                        else
+                                vddarm = 0x22;
+                }
+                pmic_reg_read(p, PFUZE100_SW1ABVOL, &value);
+                value &= ~0x3f;
+                value |= vddarm;
+                pmic_reg_write(p, PFUZE100_SW1ABVOL, value);
+
+                /* decrease VDDSOC to 1.175V */
+                pmic_reg_read(p, PFUZE100_SW1CVOL, &value);
+                value &= ~0x3f;
+                value |= 0x23;
+                pmic_reg_write(p, PFUZE100_SW1CVOL, value);
+
+                finish_anatop_bypass();
+                printf("switch to ldo_bypass mode!\n");
+        }
+}
+#endif
+
+
 #ifdef CONFIG_FSL_FASTBOOT
 
 void board_fastboot_setup(void)
 {
-	switch (get_boot_device()) {
+        switch (get_boot_device()) {
 #if defined(CONFIG_FASTBOOT_STORAGE_MMC)
-	case SD2_BOOT:
-	case MMC2_BOOT:
-	    if (!getenv("fastboot_dev"))
-			setenv("fastboot_dev", "mmc0");
-	    if (!getenv("bootcmd"))
-			setenv("bootcmd", "boota mmc0");
-	    break;
-	case SD3_BOOT:
-	case MMC3_BOOT:
-	    if (!getenv("fastboot_dev"))
-			setenv("fastboot_dev", "mmc1");
-	    if (!getenv("bootcmd"))
-			setenv("bootcmd", "boota mmc1");
-	    break;
-	case MMC4_BOOT:
-	    if (!getenv("fastboot_dev"))
-			setenv("fastboot_dev", "mmc2");
-	    if (!getenv("bootcmd"))
-			setenv("bootcmd", "boota mmc2");
-	    break;
+        case SD2_BOOT:
+        case MMC2_BOOT:
+            if (!getenv("fastboot_dev"))
+                        setenv("fastboot_dev", "mmc0");
+            if (!getenv("bootcmd"))
+                        setenv("bootcmd", "boota mmc0");
+            break;
+        case SD3_BOOT:
+        case MMC3_BOOT:
+            if (!getenv("fastboot_dev"))
+                        setenv("fastboot_dev", "mmc1");
+            if (!getenv("bootcmd"))
+                        setenv("bootcmd", "boota mmc1");
+            break;
+        case MMC4_BOOT:
+            if (!getenv("fastboot_dev"))
+                        setenv("fastboot_dev", "mmc2");
+            if (!getenv("bootcmd"))
+                        setenv("bootcmd", "boota mmc2");
+            break;
 #endif /*CONFIG_FASTBOOT_STORAGE_MMC*/
-	default:
-		printf("unsupported boot devices\n");
-		break;
-	}
+        default:
+                printf("unsupported boot devices\n");
+                break;
+        }
 
 }
 

@@ -244,7 +244,6 @@
 #define CONFIG_ENV_IS_IN_MMC
 #endif
 
-#define CONFIG_CMD_SATA
 #ifdef CONFIG_CMD_SATA
 #define CONFIG_DWC_AHSATA
 #define CONFIG_SYS_SATA_MAX_DEVICE	1
@@ -315,6 +314,7 @@
 #define CONFIG_POWER_PFUZE100_I2C_ADDR	0x08
 
 /* Framebuffer */
+/*
 #define CONFIG_VIDEO
 #define CONFIG_VIDEO_IPUV3
 #define CONFIG_CFB_CONSOLE
@@ -334,6 +334,7 @@
 #endif
 #define CONFIG_IMX_HDMI
 #define CONFIG_IMX_VIDEO_SKIP
+*/
 
 #if defined(CONFIG_ANDROID_SUPPORT)
 #include "mx6sabreandroid_common.h"

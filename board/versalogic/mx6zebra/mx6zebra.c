@@ -76,7 +76,6 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define I2C_PAD MUX_PAD_CTRL(I2C_PAD_CTRL)
 
-#define DISP0_PWR_EN	IMX_GPIO_NR(1, 30)
 
 int dram_init(void)
 {
@@ -146,12 +145,6 @@ static void setup_iomux_enet(void)
 	imx_iomux_v3_setup_multiple_pads(enet_pads1, ARRAY_SIZE(enet_pads1));
 
 	/* Reset AR8031 PHY */
-	/*gpio_direction_output(IMX_GPIO_NR(1, 25) , 0);
-	udelay(500);
-	gpio_set_value(IMX_GPIO_NR(1, 25), 1);
-	*/
-        udelay(20);
- 
         gpio_direction_output(IMX_GPIO_NR(1, 25), 0); /* assert PHY rst */
  
         gpio_direction_output(IMX_GPIO_NR(6, 24), 1);
@@ -159,7 +152,7 @@ static void setup_iomux_enet(void)
         gpio_direction_output(IMX_GPIO_NR(6, 27), 1);
         gpio_direction_output(IMX_GPIO_NR(6, 28), 1);
         gpio_direction_output(IMX_GPIO_NR(6, 29), 1);
-        udelay(1000);
+        udelay(1000 * 10);
  
         gpio_set_value(IMX_GPIO_NR(1, 25), 1); /* deassert PHY rst */
  
@@ -171,7 +164,7 @@ static void setup_iomux_enet(void)
         gpio_free(IMX_GPIO_NR(6, 27));
         gpio_free(IMX_GPIO_NR(6, 28));
         gpio_free(IMX_GPIO_NR(6, 29));
-
+        udelay(1); /* short delay to avoid contentions */
 	imx_iomux_v3_setup_multiple_pads(enet_pads2, ARRAY_SIZE(enet_pads2));
 }
 
@@ -288,6 +281,7 @@ static iomux_v3_cfg_t const rgb_pads[] = {
 
 static void enable_rgb(struct display_info_t const *dev)
 {
+	#define DISP0_PWR_EN	IMX_GPIO_NR(1, 30)
 	imx_iomux_v3_setup_multiple_pads(rgb_pads, ARRAY_SIZE(rgb_pads));
 	gpio_direction_output(DISP0_PWR_EN, 1);
 }
@@ -810,10 +804,6 @@ int board_init(void)
 	return 0;
 }
 
-void ldo_mode_set(int ldo_bypass)
-{
-	return 0;
-}
 
 #ifdef CONFIG_CMD_BMODE
 static const struct boot_mode board_boot_modes[] = {
@@ -868,10 +858,10 @@ int power_init_board(void)
         if (!pfuze)
                 return -ENODEV;
 
-        if (is_mx6dqp())
+        /*if (is_mx6dqp())*/ /* Use APS setting for all */
                 ret = pfuze_mode_init(pfuze, APS_APS);
-        else
-                ret = pfuze_mode_init(pfuze, APS_PFM);
+        /*else*/ /* Don't allow hard PFM mode setting */
+                /*ret = pfuze_mode_init(pfuze, APS_PFM);*/
 
         if (ret < 0)
                 return ret;
@@ -928,8 +918,6 @@ int power_init_board(void)
 
         return 0;
 }
-/*remove for now*/
-#undef CONFIG_LDO_BYPASS_CHECK
 
 #ifdef CONFIG_LDO_BYPASS_CHECK
 void ldo_mode_set(int ldo_bypass)
@@ -991,7 +979,9 @@ void ldo_mode_set(int ldo_bypass)
 
                 if (is_400M) {
                         if (is_cpu_type(MXC_CPU_MX6DL))
-                                vddarm = 0x1f;
+                                /*vddarm = 0x1f;*/ /* 1.075V */
+                                vddarm = 0x21; /* 1.125V=spec */
+
                         else
                                 vddarm = 0x1b;
                 } else {

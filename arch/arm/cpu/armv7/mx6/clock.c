@@ -7,7 +7,7 @@
 #include <common.h>
 #include <div64.h>
 #include <asm/io.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/crm_regs.h>
 #include <asm/arch/clock.h>
@@ -60,18 +60,18 @@ void setup_gpmi_io_clk(u32 cfg)
 
 	setbits_le32(&imx_ccm->CCGR4, MXC_CCM_CCGR4_QSPI2_ENFC_MASK);
 #elif defined(CONFIG_MX6UL)
-	/*
-	 * config gpmi and bch clock to 100 MHz
-	 * bch/gpmi select PLL2 PFD2 400M
-	 * 100M = 400M / 4
-	 */
-	clrbits_le32(&imx_ccm->cscmr1,
-		     MXC_CCM_CSCMR1_BCH_CLK_SEL |
-		     MXC_CCM_CSCMR1_GPMI_CLK_SEL);
-	clrsetbits_le32(&imx_ccm->cscdr1,
-			MXC_CCM_CSCDR1_BCH_PODF_MASK |
-			MXC_CCM_CSCDR1_GPMI_PODF_MASK,
-			cfg);
+		/*
+		 * config gpmi and bch clock to 100 MHz
+		 * bch/gpmi select PLL2 PFD2 400M
+		 * 100M = 400M / 4
+		 */
+		clrbits_le32(&imx_ccm->cscmr1,
+				 MXC_CCM_CSCMR1_BCH_CLK_SEL |
+				 MXC_CCM_CSCMR1_GPMI_CLK_SEL);
+		clrsetbits_le32(&imx_ccm->cscdr1,
+				MXC_CCM_CSCDR1_BCH_PODF_MASK |
+				MXC_CCM_CSCDR1_GPMI_PODF_MASK,
+				cfg);
 #else
 	clrbits_le32(&imx_ccm->CCGR2, MXC_CCM_CCGR2_IOMUX_IPT_CLK_IO_MASK);
 
@@ -110,10 +110,10 @@ void enable_enet_clk(unsigned char enable)
 {
 	u32 mask, *addr;
 
-	if (is_cpu_type(MXC_CPU_MX6ULL)) {
+	if (is_mx6ull()) {
 		mask = MXC_CCM_CCGR0_ENET_CLK_ENABLE_MASK;
 		addr = &imx_ccm->CCGR0;
-	} else if (is_cpu_type(MXC_CPU_MX6UL)) {
+	} else if (is_mx6ul()) {
 		mask = MXC_CCM_CCGR3_ENET_MASK;
 		addr = &imx_ccm->CCGR3;
 	} else {
@@ -133,7 +133,7 @@ void enable_uart_clk(unsigned char enable)
 {
 	u32 mask;
 
-	if (is_cpu_type(MXC_CPU_MX6UL) || is_cpu_type(MXC_CPU_MX6ULL))
+	if (is_mx6ul() || is_mx6ull())
 		mask = MXC_CCM_CCGR5_UART_MASK;
 	else
 		mask = MXC_CCM_CCGR5_UART_MASK | MXC_CCM_CCGR5_UART_SERIAL_MASK;
@@ -184,10 +184,9 @@ int enable_i2c_clk(unsigned char enable, unsigned i2c_num)
 			reg &= ~mask;
 		__raw_writel(reg, &imx_ccm->CCGR2);
 	} else {
-		if (is_cpu_type(MXC_CPU_MX6SLL))
+		if (is_mx6sll())
 			return -EINVAL;
-		if (is_cpu_type(MXC_CPU_MX6SX) || is_cpu_type(MXC_CPU_MX6UL) ||
-		    is_cpu_type(MXC_CPU_MX6ULL)) {
+		if (is_mx6sx() || is_mx6ul() || is_mx6ull()) {
 			mask = MXC_CCM_CCGR6_I2C4_MASK;
 			addr = &imx_ccm->CCGR6;
 		} else {
@@ -298,10 +297,9 @@ static u32 mxc_get_pll_pfd(enum pll_clocks pll, int pfd_num)
 
 	switch (pll) {
 	case PLL_BUS:
-		if (!is_cpu_type(MXC_CPU_MX6UL) &&
-		    !is_cpu_type(MXC_CPU_MX6ULL)) {
+		if (!is_mx6ul() && !is_mx6ull()) {
 			if (pfd_num == 3) {
-				/* No PFD3 on PPL2 */
+				/* No PFD3 on PLL2 */
 				return 0;
 			}
 		}
@@ -399,9 +397,8 @@ static u32 get_ipg_per_clk(void)
 	u32 reg, perclk_podf;
 
 	reg = __raw_readl(&imx_ccm->cscmr1);
-	if (is_cpu_type(MXC_CPU_MX6SLL) || is_cpu_type(MXC_CPU_MX6SL) ||
-	    is_cpu_type(MXC_CPU_MX6SX) || is_mx6dqp() ||
-	    is_cpu_type(MXC_CPU_MX6UL) || is_cpu_type(MXC_CPU_MX6ULL)) {
+	if (is_mx6sll() || is_mx6sl() || is_mx6sx() ||
+	    is_mx6dqp() || is_mx6ul() || is_mx6ull()) {
 		if (reg & MXC_CCM_CSCMR1_PER_CLK_SEL_MASK)
 			return MXC_HCLK; /* OSC 24Mhz */
 	}
@@ -417,9 +414,8 @@ static u32 get_uart_clk(void)
 	u32 freq = decode_pll(PLL_USBOTG, MXC_HCLK) / 6; /* static divider */
 	reg = __raw_readl(&imx_ccm->cscdr1);
 
-	if (is_cpu_type(MXC_CPU_MX6SLL) || is_cpu_type(MXC_CPU_MX6SL) ||
-	    is_cpu_type(MXC_CPU_MX6SX) || is_mx6dqp() ||
-	    is_cpu_type(MXC_CPU_MX6UL) || is_cpu_type(MXC_CPU_MX6ULL)) {
+	if (is_mx6sl() || is_mx6sx() || is_mx6dqp() || is_mx6ul() ||
+	    is_mx6sll() || is_mx6ull()) {
 		if (reg & MXC_CCM_CSCDR1_UART_CLK_SEL)
 			freq = MXC_HCLK;
 	}
@@ -438,9 +434,8 @@ static u32 get_cspi_clk(void)
 	cspi_podf = (reg & MXC_CCM_CSCDR2_ECSPI_CLK_PODF_MASK) >>
 		     MXC_CCM_CSCDR2_ECSPI_CLK_PODF_OFFSET;
 
-	if (is_mx6dqp() || is_cpu_type(MXC_CPU_MX6SL) || is_cpu_type(MXC_CPU_MX6SLL) ||
-	    is_cpu_type(MXC_CPU_MX6SX) || is_cpu_type(MXC_CPU_MX6UL) ||
-	    is_cpu_type(MXC_CPU_MX6ULL)) {
+	if (is_mx6dqp() || is_mx6sl() || is_mx6sx() || is_mx6ul() ||
+	    is_mx6sll() || is_mx6ull()) {
 		if (reg & MXC_CCM_CSCDR2_ECSPI_CLK_SEL_MASK)
 			return MXC_HCLK / (cspi_podf + 1);
 	}
@@ -502,15 +497,14 @@ static u32 get_mmdc_ch0_clk(void)
 
 	u32 freq, podf, per2_clk2_podf, pmu_misc2_audio_div;
 
-	if (is_cpu_type(MXC_CPU_MX6SX) || is_cpu_type(MXC_CPU_MX6UL) ||
-	    is_cpu_type(MXC_CPU_MX6SL) || is_cpu_type(MXC_CPU_MX6ULL) ||
-	    is_cpu_type(MXC_CPU_MX6SLL)) {
+	if (is_mx6sx() || is_mx6ul() || is_mx6ull() || is_mx6sl() ||
+	    is_mx6sll()) {
 		podf = (cbcdr & MXC_CCM_CBCDR_MMDC_CH1_PODF_MASK) >>
 			MXC_CCM_CBCDR_MMDC_CH1_PODF_OFFSET;
 		if (cbcdr & MXC_CCM_CBCDR_PERIPH2_CLK_SEL) {
 			per2_clk2_podf = (cbcdr & MXC_CCM_CBCDR_PERIPH2_CLK2_PODF_MASK) >>
 				MXC_CCM_CBCDR_PERIPH2_CLK2_PODF_OFFSET;
-			if (is_cpu_type(MXC_CPU_MX6SL)) {
+			if (is_mx6sl()) {
 				if (cbcmr & MXC_CCM_CBCMR_PERIPH2_CLK2_SEL)
 					freq = MXC_HCLK;
 				else
@@ -536,7 +530,7 @@ static u32 get_mmdc_ch0_clk(void)
 				freq = mxc_get_pll_pfd(PLL_BUS, 0);
 				break;
 			case 3:
-				if (is_cpu_type(MXC_CPU_MX6SL)) {
+				if (is_mx6sl()) {
 					freq = mxc_get_pll_pfd(PLL_BUS, 2) >> 1;
 					break;
 				}
@@ -568,57 +562,6 @@ static u32 get_mmdc_ch0_clk(void)
 }
 
 #if defined(CONFIG_VIDEO_MXS)
-
-static int disable_lcdif_clock(u32 base_addr)
-{
-	u32 reg = 0;
-	u32 lcdif_ccgr3_mask;
-
-	if (is_cpu_type(MXC_CPU_MX6SX)) {
-		if ((base_addr != LCDIF1_BASE_ADDR) &&
-		    (base_addr != LCDIF2_BASE_ADDR)) {
-			puts("Wrong LCD interface!\n");
-			return -EINVAL;
-		}
-		lcdif_ccgr3_mask = (base_addr == LCDIF2_BASE_ADDR) ?
-			(MXC_CCM_CCGR3_LCDIF2_PIX_MASK |
-			 MXC_CCM_CCGR3_DISP_AXI_MASK) :
-			(MXC_CCM_CCGR3_LCDIF1_PIX_MASK |
-			 MXC_CCM_CCGR3_DISP_AXI_MASK);
-	} else if (is_cpu_type(MXC_CPU_MX6UL) || is_cpu_type(MXC_CPU_MX6ULL)
-			|| is_cpu_type(MXC_CPU_MX6SLL)) {
-		if (base_addr != LCDIF1_BASE_ADDR) {
-			puts("Wrong LCD interface!\n");
-			return -EINVAL;
-		}
-		lcdif_ccgr3_mask =  MXC_CCM_CCGR3_LCDIF1_PIX_MASK;
-	} else if (is_cpu_type(MXC_CPU_MX6SL)) {
-		if (base_addr != LCDIF1_BASE_ADDR) {
-			puts("Wrong LCD interface!\n");
-			return -EINVAL;
-		}
-
-		reg = readl(&imx_ccm->CCGR3);
-		reg &= ~(MXC_CCM_CCGR3_LCDIF_AXI_MASK | MXC_CCM_CCGR3_LCDIF_PIX_MASK);
-		writel(reg, &imx_ccm->CCGR3);
-		return 0;
-
-	} else {
-		return -EINVAL;
-	}
-
-	/* Gate LCDIF clock first */
-	reg = readl(&imx_ccm->CCGR3);
-	reg &= ~lcdif_ccgr3_mask;
-	writel(reg, &imx_ccm->CCGR3);
-
-	reg = readl(&imx_ccm->CCGR2);
-	reg &= ~MXC_CCM_CCGR2_LCD_MASK;
-	writel(reg, &imx_ccm->CCGR2);
-
-	return 0;
-}
-
 static int enable_pll_video(u32 pll_div, u32 pll_num, u32 pll_denom,
 			    u32 post_div)
 {
@@ -698,25 +641,26 @@ void mxs_set_lcdclk(u32 base_addr, u32 freq)
 
 	debug("mxs_set_lcdclk, freq = %dKHz\n", freq);
 
-	if ((!is_cpu_type(MXC_CPU_MX6SX)) && !is_cpu_type(MXC_CPU_MX6UL) &&
-	    !is_cpu_type(MXC_CPU_MX6ULL) && !is_cpu_type(MXC_CPU_MX6SL) &&
-	    !is_cpu_type(MXC_CPU_MX6SLL)) {
+	if (!is_mx6sx() && !is_mx6ul() && !is_mx6ull() && !is_mx6sl() &&
+	    !is_mx6sll()) {
 		debug("This chip not support lcd!\n");
 		return;
 	}
 
-	if (!is_cpu_type(MXC_CPU_MX6SL)) {
+	if (!is_mx6sl()) {
 		if (base_addr == LCDIF1_BASE_ADDR) {
 			reg = readl(&imx_ccm->cscdr2);
 			/* Can't change clocks when clock not from pre-mux */
 			if ((reg & MXC_CCM_CSCDR2_LCDIF1_CLK_SEL_MASK) != 0)
 				return;
-		} else if (is_cpu_type(MXC_CPU_MX6SX)) {
-			reg = readl(&imx_ccm->cscdr2);
-			/* Can't change clocks when clock not from pre-mux */
-			if ((reg & MXC_CCM_CSCDR2_LCDIF2_CLK_SEL_MASK) != 0)
-				return;
 		}
+	}
+
+	if (is_mx6sx()) {
+		reg = readl(&imx_ccm->cscdr2);
+		/* Can't change clocks when clock not from pre-mux */
+		if ((reg & MXC_CCM_CSCDR2_LCDIF2_CLK_SEL_MASK) != 0)
+			return;
 	}
 
 	temp = freq * max_pred * max_postd;
@@ -780,10 +724,8 @@ void mxs_set_lcdclk(u32 base_addr, u32 freq)
 		if (enable_pll_video(pll_div, pll_num, pll_denom, post_div))
 			return;
 
-		disable_lcdif_clock(base_addr);
-
-		if (!is_cpu_type(MXC_CPU_MX6SL)) {
-
+		enable_lcdif_clock(base_addr, 0);
+		if (!is_mx6sl()) {
 			/* Select pre-lcd clock to PLL5 and set pre divider */
 			clrsetbits_le32(&imx_ccm->cscdr2,
 					MXC_CCM_CSCDR2_LCDIF1_PRED_SEL_MASK |
@@ -796,7 +738,7 @@ void mxs_set_lcdclk(u32 base_addr, u32 freq)
 			clrsetbits_le32(&imx_ccm->cbcmr,
 					MXC_CCM_CBCMR_LCDIF1_PODF_MASK,
 					((postd - 1) <<
-					 MXC_CCM_CBCMR_LCDIF1_PODF_OFFSET));
+					MXC_CCM_CBCMR_LCDIF1_PODF_OFFSET));
 		} else {
 			/* Select pre-lcd clock to PLL5 and set pre divider */
 			clrsetbits_le32(&imx_ccm->cscdr2,
@@ -812,15 +754,14 @@ void mxs_set_lcdclk(u32 base_addr, u32 freq)
 					(((postd - 1)^0x6) <<
 					 MXC_CCM_CSCMR1_LCDIF_PIX_PODF_OFFSET));
 		}
-		enable_lcdif_clock(base_addr);
 
-	} else if (is_cpu_type(MXC_CPU_MX6SX)) {
+		enable_lcdif_clock(base_addr, 1);
+	} else if (is_mx6sx()) {
 		/* Setting LCDIF2 for i.MX6SX */
 		if (enable_pll_video(pll_div, pll_num, pll_denom, post_div))
 			return;
 
-		disable_lcdif_clock(base_addr);
-
+		enable_lcdif_clock(base_addr, 0);
 		/* Select pre-lcd clock to PLL5 and set pre divider */
 		clrsetbits_le32(&imx_ccm->cscdr2,
 				MXC_CCM_CSCDR2_LCDIF2_PRED_SEL_MASK |
@@ -835,16 +776,16 @@ void mxs_set_lcdclk(u32 base_addr, u32 freq)
 				((postd - 1) <<
 				 MXC_CCM_CSCMR1_LCDIF2_PODF_OFFSET));
 
-		enable_lcdif_clock(base_addr);
+		enable_lcdif_clock(base_addr, 1);
 	}
 }
 
-int enable_lcdif_clock(u32 base_addr)
+int enable_lcdif_clock(u32 base_addr, bool enable)
 {
 	u32 reg = 0;
 	u32 lcdif_clk_sel_mask, lcdif_ccgr3_mask;
 
-	if (is_cpu_type(MXC_CPU_MX6SX)) {
+	if (is_mx6sx()) {
 		if ((base_addr != LCDIF1_BASE_ADDR) &&
 		    (base_addr != LCDIF2_BASE_ADDR)) {
 			puts("Wrong LCD interface!\n");
@@ -859,8 +800,7 @@ int enable_lcdif_clock(u32 base_addr)
 			 MXC_CCM_CCGR3_DISP_AXI_MASK) :
 			(MXC_CCM_CCGR3_LCDIF1_PIX_MASK |
 			 MXC_CCM_CCGR3_DISP_AXI_MASK);
-	} else if (is_cpu_type(MXC_CPU_MX6UL) || is_cpu_type(MXC_CPU_MX6ULL)
-		|| is_cpu_type(MXC_CPU_MX6SLL)) {
+	} else if (is_mx6ul() || is_mx6ull() || is_mx6sll()) {
 		if (base_addr != LCDIF1_BASE_ADDR) {
 			puts("Wrong LCD interface!\n");
 			return -EINVAL;
@@ -868,28 +808,32 @@ int enable_lcdif_clock(u32 base_addr)
 		/* Set to pre-mux clock at default */
 		lcdif_clk_sel_mask = MXC_CCM_CSCDR2_LCDIF1_CLK_SEL_MASK;
 		lcdif_ccgr3_mask =  MXC_CCM_CCGR3_LCDIF1_PIX_MASK;
-	} else if (is_cpu_type(MXC_CPU_MX6SL)) {
+	} else if (is_mx6sl()) {
 		if (base_addr != LCDIF1_BASE_ADDR) {
 			puts("Wrong LCD interface!\n");
 			return -EINVAL;
 		}
 
 		reg = readl(&imx_ccm->CCGR3);
-		reg &= ~(MXC_CCM_CCGR3_LCDIF_AXI_MASK | MXC_CCM_CCGR3_LCDIF_PIX_MASK);
+		reg &= ~(MXC_CCM_CCGR3_LCDIF_AXI_MASK |
+			 MXC_CCM_CCGR3_LCDIF_PIX_MASK);
 		writel(reg, &imx_ccm->CCGR3);
 
-		reg = readl(&imx_ccm->cscdr3);
-		reg &= ~MXC_CCM_CSCDR3_LCDIF_AXI_CLK_SEL_MASK;
-		reg |= 1 << MXC_CCM_CSCDR3_LCDIF_AXI_CLK_SEL_OFFSET;
-		writel(reg, &imx_ccm->cscdr3);
+		if (enable) {
+			reg = readl(&imx_ccm->cscdr3);
+			reg &= ~MXC_CCM_CSCDR3_LCDIF_AXI_CLK_SEL_MASK;
+			reg |= 1 << MXC_CCM_CSCDR3_LCDIF_AXI_CLK_SEL_OFFSET;
+			writel(reg, &imx_ccm->cscdr3);
 
-		reg = readl(&imx_ccm->CCGR3);
-		reg |= MXC_CCM_CCGR3_LCDIF_AXI_MASK | MXC_CCM_CCGR3_LCDIF_PIX_MASK;
-		writel(reg, &imx_ccm->CCGR3);
+			reg = readl(&imx_ccm->CCGR3);
+			reg |= MXC_CCM_CCGR3_LCDIF_AXI_MASK |
+				MXC_CCM_CCGR3_LCDIF_PIX_MASK;
+			writel(reg, &imx_ccm->CCGR3);
+		}
+
 		return 0;
-
 	} else {
-		return -EINVAL;
+		return 0;
 	}
 
 	/* Gate LCDIF clock first */
@@ -901,19 +845,21 @@ int enable_lcdif_clock(u32 base_addr)
 	reg &= ~MXC_CCM_CCGR2_LCD_MASK;
 	writel(reg, &imx_ccm->CCGR2);
 
-	/* Select pre-mux */
-	reg = readl(&imx_ccm->cscdr2);
-	reg &= ~lcdif_clk_sel_mask;
-	writel(reg, &imx_ccm->cscdr2);
+	if (enable) {
+		/* Select pre-mux */
+		reg = readl(&imx_ccm->cscdr2);
+		reg &= ~lcdif_clk_sel_mask;
+		writel(reg, &imx_ccm->cscdr2);
 
-	/* Enable the LCDIF pix clock */
-	reg = readl(&imx_ccm->CCGR3);
-	reg |= lcdif_ccgr3_mask;
-	writel(reg, &imx_ccm->CCGR3);
+		/* Enable the LCDIF pix clock */
+		reg = readl(&imx_ccm->CCGR3);
+		reg |= lcdif_ccgr3_mask;
+		writel(reg, &imx_ccm->CCGR3);
 
-	reg = readl(&imx_ccm->CCGR2);
-	reg |= MXC_CCM_CCGR2_LCD_MASK;
-	writel(reg, &imx_ccm->CCGR2);
+		reg = readl(&imx_ccm->CCGR2);
+		reg |= MXC_CCM_CCGR2_LCD_MASK;
+		writel(reg, &imx_ccm->CCGR2);
+	}
 
 	return 0;
 }
@@ -1059,9 +1005,7 @@ int enable_fec_anatop_clock(int fec_id, enum enet_freq freq)
 		reg |= BF_ANADIG_PLL_ENET_DIV_SELECT(freq);
 	} else if (fec_id == 1) {
 		/* Only i.MX6SX/UL support ENET2 */
-		if (!(is_cpu_type(MXC_CPU_MX6SX) ||
-		      is_cpu_type(MXC_CPU_MX6UL) ||
-		      is_cpu_type(MXC_CPU_MX6ULL)))
+		if (!(is_mx6sx() || is_mx6ul() || is_mx6ull()))
 			return -EINVAL;
 		reg &= ~BM_ANADIG_PLL_ENET2_DIV_SELECT;
 		reg |= BF_ANADIG_PLL_ENET2_DIV_SELECT(freq);
@@ -1125,12 +1069,16 @@ static u32 get_usdhc_clk(u32 port)
 	u32 cscmr1 = __raw_readl(&imx_ccm->cscmr1);
 	u32 cscdr1 = __raw_readl(&imx_ccm->cscdr1);
 
-	if (is_cpu_type(MXC_CPU_MX6UL) || is_cpu_type(MXC_CPU_MX6ULL))
+	if (is_mx6ul() || is_mx6ull()) {
 		if (port > 1)
 			return 0;
-	if (is_cpu_type(MXC_CPU_MX6SLL))
+	}
+
+	if (is_mx6sll()) {
 		if (port > 2)
 			return 0;
+	}
+
 	switch (port) {
 	case 0:
 		usdhc_podf = (cscdr1 & MXC_CCM_CSCDR1_USDHC1_PODF_MASK) >>
@@ -1274,7 +1222,7 @@ int enable_pcie_clock(void)
 #define ANADIG_ANA_MISC1_LVDS1_CLK_SEL_PCIE_REF	0xa
 #define ANADIG_ANA_MISC1_LVDS1_CLK_SEL_SATA_REF	0xb
 
-	if (is_cpu_type(MXC_CPU_MX6SX))
+	if (is_mx6sx())
 		lvds1_clk_sel = ANADIG_ANA_MISC1_LVDS1_CLK_SEL_PCIE_REF;
 	else
 		lvds1_clk_sel = ANADIG_ANA_MISC1_LVDS1_CLK_SEL_SATA_REF;
@@ -1311,7 +1259,7 @@ void hab_caam_clock_enable(unsigned char enable)
 {
 	u32 reg;
 
-	if (is_cpu_type(MXC_CPU_MX6ULL) || is_cpu_type(MXC_CPU_MX6SLL)) {
+	if (is_mx6ull() || is_mx6sll()) {
 		/* CG5, DCP clock */
 		reg = __raw_readl(&imx_ccm->CCGR0);
 		if (enable)
@@ -1431,6 +1379,7 @@ int do_mx6_showclocks(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	printf("PLL_NET    %8d MHz\n", freq / 1000000);
 
 	printf("\n");
+	printf("ARM        %8d kHz\n", mxc_get_clock(MXC_ARM_CLK) / 1000);
 	printf("IPG        %8d kHz\n", mxc_get_clock(MXC_IPG_CLK) / 1000);
 	printf("UART       %8d kHz\n", mxc_get_clock(MXC_UART_CLK) / 1000);
 #ifdef CONFIG_MXC_SPI
@@ -1493,6 +1442,170 @@ void enable_ipu_clock(void)
 		pre_misc_setting();
 	}
 }
+
+#if defined(CONFIG_MX6Q) || defined(CONFIG_MX6D) || defined(CONFIG_MX6DL) || \
+	defined(CONFIG_MX6S)
+static void disable_ldb_di_clock_sources(void)
+{
+	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+	int reg;
+
+	/* Make sure PFDs are disabled at boot. */
+	reg = readl(&mxc_ccm->analog_pfd_528);
+	/* Cannot disable pll2_pfd2_396M, as it is the MMDC clock in iMX6DL */
+	if (is_mx6sdl())
+		reg |= 0x80008080;
+	else
+		reg |= 0x80808080;
+	writel(reg, &mxc_ccm->analog_pfd_528);
+
+	/* Disable PLL3 PFDs */
+	reg = readl(&mxc_ccm->analog_pfd_480);
+	reg |= 0x80808080;
+	writel(reg, &mxc_ccm->analog_pfd_480);
+
+	/* Disable PLL5 */
+	reg = readl(&mxc_ccm->analog_pll_video);
+	reg &= ~(1 << 13);
+	writel(reg, &mxc_ccm->analog_pll_video);
+}
+
+static void enable_ldb_di_clock_sources(void)
+{
+	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+	int reg;
+
+	reg = readl(&mxc_ccm->analog_pfd_528);
+	if (is_mx6sdl())
+		reg &= ~(0x80008080);
+	else
+		reg &= ~(0x80808080);
+	writel(reg, &mxc_ccm->analog_pfd_528);
+
+	reg = readl(&mxc_ccm->analog_pfd_480);
+	reg &= ~(0x80808080);
+	writel(reg, &mxc_ccm->analog_pfd_480);
+}
+
+/*
+ * Try call this function as early in the boot process as possible since the
+ * function temporarily disables PLL2 PFD's, PLL3 PFD's and PLL5.
+ */
+void select_ldb_di_clock_source(enum ldb_di_clock clk)
+{
+	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+	int reg;
+
+	/*
+	 * Need to follow a strict procedure when changing the LDB
+	 * clock, else we can introduce a glitch. Things to keep in
+	 * mind:
+	 * 1. The current and new parent clocks must be disabled.
+	 * 2. The default clock for ldb_dio_clk is mmdc_ch1 which has
+	 * no CG bit.
+	 * 3. In the RTL implementation of the LDB_DI_CLK_SEL mux
+	 * the top four options are in one mux and the PLL3 option along
+	 * with another option is in the second mux. There is third mux
+	 * used to decide between the first and second mux.
+	 * The code below switches the parent to the bottom mux first
+	 * and then manipulates the top mux. This ensures that no glitch
+	 * will enter the divider.
+	 *
+	 * Need to disable MMDC_CH1 clock manually as there is no CG bit
+	 * for this clock. The only way to disable this clock is to move
+	 * it to pll3_sw_clk and then to disable pll3_sw_clk
+	 * Make sure periph2_clk2_sel is set to pll3_sw_clk
+	 */
+
+	/* Disable all ldb_di clock parents */
+	disable_ldb_di_clock_sources();
+
+	/* Set MMDC_CH1 mask bit */
+	reg = readl(&mxc_ccm->ccdr);
+	reg |= MXC_CCM_CCDR_MMDC_CH1_HS_MASK;
+	writel(reg, &mxc_ccm->ccdr);
+
+	/* Set periph2_clk2_sel to be sourced from PLL3_sw_clk */
+	reg = readl(&mxc_ccm->cbcmr);
+	reg &= ~MXC_CCM_CBCMR_PERIPH2_CLK2_SEL;
+	writel(reg, &mxc_ccm->cbcmr);
+
+	/*
+	 * Set the periph2_clk_sel to the top mux so that
+	 * mmdc_ch1 is from pll3_sw_clk.
+	 */
+	reg = readl(&mxc_ccm->cbcdr);
+	reg |= MXC_CCM_CBCDR_PERIPH2_CLK_SEL;
+	writel(reg, &mxc_ccm->cbcdr);
+
+	/* Wait for the clock switch */
+	while (readl(&mxc_ccm->cdhipr))
+		;
+	/* Disable pll3_sw_clk by selecting bypass clock source */
+	reg = readl(&mxc_ccm->ccsr);
+	reg |= MXC_CCM_CCSR_PLL3_SW_CLK_SEL;
+	writel(reg, &mxc_ccm->ccsr);
+
+	/* Set the ldb_di0_clk and ldb_di1_clk to 111b */
+	reg = readl(&mxc_ccm->cs2cdr);
+	reg |= ((7 << MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_OFFSET)
+	      | (7 << MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_OFFSET));
+	writel(reg, &mxc_ccm->cs2cdr);
+
+	/* Set the ldb_di0_clk and ldb_di1_clk to 100b */
+	reg = readl(&mxc_ccm->cs2cdr);
+	reg &= ~(MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_MASK
+	      | MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_MASK);
+	reg |= ((4 << MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_OFFSET)
+	      | (4 << MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_OFFSET));
+	writel(reg, &mxc_ccm->cs2cdr);
+
+	/* Set the ldb_di0_clk and ldb_di1_clk to desired source */
+	reg = readl(&mxc_ccm->cs2cdr);
+	reg &= ~(MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_MASK
+	      | MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_MASK);
+	reg |= ((clk << MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_OFFSET)
+	      | (clk << MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_OFFSET));
+	writel(reg, &mxc_ccm->cs2cdr);
+
+	/* Unbypass pll3_sw_clk */
+	reg = readl(&mxc_ccm->ccsr);
+	reg &= ~MXC_CCM_CCSR_PLL3_SW_CLK_SEL;
+	writel(reg, &mxc_ccm->ccsr);
+
+	/*
+	 * Set the periph2_clk_sel back to the bottom mux so that
+	 * mmdc_ch1 is from its original parent.
+	 */
+	reg = readl(&mxc_ccm->cbcdr);
+	reg &= ~MXC_CCM_CBCDR_PERIPH2_CLK_SEL;
+	writel(reg, &mxc_ccm->cbcdr);
+
+	/* Wait for the clock switch */
+	while (readl(&mxc_ccm->cdhipr))
+		;
+	/* Clear MMDC_CH1 mask bit */
+	reg = readl(&mxc_ccm->ccdr);
+	reg &= ~MXC_CCM_CCDR_MMDC_CH1_HS_MASK;
+	writel(reg, &mxc_ccm->ccdr);
+
+	enable_ldb_di_clock_sources();
+}
+#endif
+
+#ifdef CONFIG_MTD_NOR_FLASH
+void enable_eim_clk(unsigned char enable)
+{
+	u32 reg;
+
+	reg = __raw_readl(&imx_ccm->CCGR6);
+	if (enable)
+		reg |= MXC_CCM_CCGR6_EMI_SLOW_MASK;
+	else
+		reg &= ~MXC_CCM_CCGR6_EMI_SLOW_MASK;
+	__raw_writel(reg, &imx_ccm->CCGR6);
+}
+#endif
 
 #if defined(CONFIG_MXC_EPDC)
 #if defined(CONFIG_MX6ULL) || defined(CONFIG_MX6SLL)

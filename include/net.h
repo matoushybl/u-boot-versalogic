@@ -38,6 +38,14 @@
 
 #define PKTALIGN	ARCH_DMA_MINALIGN
 
+/* ARP hardware address length */
+#define ARP_HLEN 6
+/*
+ * The size of a MAC address in string form, each digit requires two chars
+ * and five separator characters to form '00:00:00:00:00:00'.
+ */
+#define ARP_HLEN_ASCII (ARP_HLEN * 2) + (ARP_HLEN - 1)
+
 /* IPv4 addresses are always 32 bits in size */
 struct in_addr {
 	__be32 s_addr;
@@ -90,7 +98,7 @@ enum eth_state_t {
  */
 struct eth_pdata {
 	phys_addr_t iobase;
-	unsigned char enetaddr[6];
+	unsigned char enetaddr[ARP_HLEN];
 	int phy_interface;
 	int max_speed;
 };
@@ -160,8 +168,9 @@ void eth_halt_state_only(void); /* Set passive state */
 
 #ifndef CONFIG_DM_ETH
 struct eth_device {
-	char name[16];
-	unsigned char enetaddr[6];
+#define ETH_NAME_LEN 16
+	char name[ETH_NAME_LEN];
+	unsigned char enetaddr[ARP_HLEN];
 	phys_addr_t iobase;
 	int state;
 
@@ -237,6 +246,30 @@ void eth_parse_enetaddr(const char *addr, uchar *enetaddr);
 int eth_getenv_enetaddr(const char *name, uchar *enetaddr);
 int eth_setenv_enetaddr(const char *name, const uchar *enetaddr);
 
+/**
+ * eth_setenv_enetaddr_by_index() - set the MAC address environment variable
+ *
+ * This sets up an environment variable with the given MAC address (@enetaddr).
+ * The environment variable to be set is defined by <@base_name><@index>addr.
+ * If @index is 0 it is omitted. For common Ethernet this means ethaddr,
+ * eth1addr, etc.
+ *
+ * @base_name:  Base name for variable, typically "eth"
+ * @index:      Index of interface being updated (>=0)
+ * @enetaddr:   Pointer to MAC address to put into the variable
+ * @return 0 if OK, other value on error
+ */
+int eth_setenv_enetaddr_by_index(const char *base_name, int index,
+				 uchar *enetaddr);
+
+
+/*
+ * Initialize USB ethernet device with CONFIG_DM_ETH
+ * Returns:
+ *	0 is success, non-zero is error status.
+ */
+int usb_ether_init(void);
+
 /*
  * Get the hardware address for an ethernet interface .
  * Args:
@@ -252,7 +285,7 @@ int eth_getenv_enetaddr_by_index(const char *base_name, int index,
 int eth_init(void);			/* Initialize the device */
 int eth_send(void *packet, int length);	   /* Send a packet */
 
-#ifdef CONFIG_API
+#if defined(CONFIG_API) || defined(CONFIG_EFI_LOADER)
 int eth_receive(void *packet, int length); /* Receive a packet*/
 extern void (*push_packet)(void *packet, int length);
 #endif
@@ -276,10 +309,10 @@ u32 ether_crc(size_t len, unsigned char const *p);
  */
 
 struct ethernet_hdr {
-	u8		et_dest[6];	/* Destination node		*/
-	u8		et_src[6];	/* Source node			*/
-	u16		et_protlen;	/* Protocol or length		*/
-};
+	u8		et_dest[ARP_HLEN];	/* Destination node	*/
+	u8		et_src[ARP_HLEN];	/* Source node		*/
+	u16		et_protlen;		/* Protocol or length	*/
+} __attribute__((packed));
 
 /* Ethernet header size */
 #define ETHER_HDR_SIZE	(sizeof(struct ethernet_hdr))
@@ -287,17 +320,17 @@ struct ethernet_hdr {
 #define ETH_FCS_LEN	4		/* Octets in the FCS		*/
 
 struct e802_hdr {
-	u8		et_dest[6];	/* Destination node		*/
-	u8		et_src[6];	/* Source node			*/
-	u16		et_protlen;	/* Protocol or length		*/
-	u8		et_dsap;	/* 802 DSAP			*/
-	u8		et_ssap;	/* 802 SSAP			*/
-	u8		et_ctl;		/* 802 control			*/
-	u8		et_snap1;	/* SNAP				*/
+	u8		et_dest[ARP_HLEN];	/* Destination node	*/
+	u8		et_src[ARP_HLEN];	/* Source node		*/
+	u16		et_protlen;		/* Protocol or length	*/
+	u8		et_dsap;		/* 802 DSAP		*/
+	u8		et_ssap;		/* 802 SSAP		*/
+	u8		et_ctl;			/* 802 control		*/
+	u8		et_snap1;		/* SNAP			*/
 	u8		et_snap2;
 	u8		et_snap3;
-	u16		et_prot;	/* 802 protocol			*/
-};
+	u16		et_prot;		/* 802 protocol		*/
+} __attribute__((packed));
 
 /* 802 + SNAP + ethernet header size */
 #define E802_HDR_SIZE	(sizeof(struct e802_hdr))
@@ -306,12 +339,12 @@ struct e802_hdr {
  *	Virtual LAN Ethernet header
  */
 struct vlan_ethernet_hdr {
-	u8		vet_dest[6];	/* Destination node		*/
-	u8		vet_src[6];	/* Source node			*/
-	u16		vet_vlan_type;	/* PROT_VLAN			*/
-	u16		vet_tag;	/* TAG of VLAN			*/
-	u16		vet_type;	/* protocol type		*/
-};
+	u8		vet_dest[ARP_HLEN];	/* Destination node	*/
+	u8		vet_src[ARP_HLEN];	/* Source node		*/
+	u16		vet_vlan_type;		/* PROT_VLAN		*/
+	u16		vet_tag;		/* TAG of VLAN		*/
+	u16		vet_type;		/* protocol type	*/
+} __attribute__((packed));
 
 /* VLAN Ethernet header size */
 #define VLAN_ETHER_HDR_SIZE	(sizeof(struct vlan_ethernet_hdr))
@@ -320,6 +353,8 @@ struct vlan_ethernet_hdr {
 #define PROT_ARP	0x0806		/* IP ARP protocol		*/
 #define PROT_RARP	0x8035		/* IP ARP protocol		*/
 #define PROT_VLAN	0x8100		/* IEEE 802.1q protocol		*/
+#define PROT_IPV6	0x86dd		/* IPv6 over bluebook		*/
+#define PROT_PPP_SES	0x8864		/* PPPoE session messages	*/
 
 #define IPPROTO_ICMP	 1	/* Internet Control Message Protocol	*/
 #define IPPROTO_UDP	17	/* User Datagram Protocol		*/
@@ -338,7 +373,7 @@ struct ip_hdr {
 	u16		ip_sum;		/* checksum			*/
 	struct in_addr	ip_src;		/* Source IP address		*/
 	struct in_addr	ip_dst;		/* Destination IP address	*/
-};
+} __attribute__((packed));
 
 #define IP_OFFS		0x1fff /* ip offset *= 8 */
 #define IP_FLAGS	0xe000 /* first 3 bits */
@@ -366,7 +401,7 @@ struct ip_udp_hdr {
 	u16		udp_dst;	/* UDP destination port		*/
 	u16		udp_len;	/* Length of UDP packet		*/
 	u16		udp_xsum;	/* Checksum			*/
-};
+} __attribute__((packed));
 
 #define IP_UDP_HDR_SIZE		(sizeof(struct ip_udp_hdr))
 #define UDP_HDR_SIZE		(IP_UDP_HDR_SIZE - IP_HDR_SIZE)
@@ -379,7 +414,6 @@ struct arp_hdr {
 #   define ARP_ETHER	    1		/* Ethernet  hardware address	*/
 	u16		ar_pro;		/* Format of protocol address	*/
 	u8		ar_hln;		/* Length of hardware address	*/
-#   define ARP_HLEN	6
 	u8		ar_pln;		/* Length of protocol address	*/
 #   define ARP_PLEN	4
 	u16		ar_op;		/* Operation			*/
@@ -405,7 +439,7 @@ struct arp_hdr {
 	u8		ar_tha[];	/* Target hardware address	*/
 	u8		ar_tpa[];	/* Target protocol address	*/
 #endif /* 0 */
-};
+} __attribute__((packed));
 
 #define ARP_HDR_SIZE	(8+20)		/* Size assuming ethernet	*/
 
@@ -440,26 +474,20 @@ struct icmp_hdr {
 		} frag;
 		u8 data[0];
 	} un;
-};
+} __attribute__((packed));
 
 #define ICMP_HDR_SIZE		(sizeof(struct icmp_hdr))
 #define IP_ICMP_HDR_SIZE	(IP_HDR_SIZE + ICMP_HDR_SIZE)
 
 /*
- * Maximum packet size; used to allocate packet storage.
- * TFTP packets can be 524 bytes + IP header + ethernet header.
- * Lets be conservative, and go for 38 * 16.  (Must also be
- * a multiple of 32 bytes).
- */
-/*
- * AS.HARNOIS : Better to set PKTSIZE to maximum size because
- * traffic type is not always controlled
- * maximum packet size =  1518
+ * Maximum packet size; used to allocate packet storage. Use
+ * the maxium Ethernet frame size as specified by the Ethernet
+ * standard including the 802.1Q tag (VLAN tagging).
+ * maximum packet size =  1522
  * maximum packet size and multiple of 32 bytes =  1536
  */
-#define PKTSIZE			1518
+#define PKTSIZE			1522
 #define PKTSIZE_ALIGN		1536
-/*#define PKTSIZE		608*/
 
 /*
  * Maximum receive ring size; that is, the number of packets
@@ -494,16 +522,16 @@ extern char	net_nis_domain[32];	/* Our IS domain */
 extern char	net_hostname[32];	/* Our hostname */
 extern char	net_root_path[64];	/* Our root path */
 /** END OF BOOTP EXTENTIONS **/
-extern u8		net_ethaddr[6];		/* Our ethernet address */
-extern u8		net_server_ethaddr[6];	/* Boot server enet address */
+extern u8		net_ethaddr[ARP_HLEN];		/* Our ethernet address */
+extern u8		net_server_ethaddr[ARP_HLEN];	/* Boot server enet address */
 extern struct in_addr	net_ip;		/* Our    IP addr (0 = unknown) */
 extern struct in_addr	net_server_ip;	/* Server IP addr (0 = unknown) */
 extern uchar		*net_tx_packet;		/* THE transmit packet */
 extern uchar		*net_rx_packets[PKTBUFSRX]; /* Receive packets */
 extern uchar		*net_rx_packet;		/* Current receive packet */
 extern int		net_rx_packet_len;	/* Current rx packet length */
-extern const u8		net_bcast_ethaddr[6];	/* Ethernet broadcast address */
-extern const u8		net_null_ethaddr[6];
+extern const u8		net_bcast_ethaddr[ARP_HLEN];	/* Ethernet broadcast address */
+extern const u8		net_null_ethaddr[ARP_HLEN];
 
 #define VLAN_NONE	4095			/* untagged */
 #define VLAN_IDMASK	0x0fff			/* mask of valid vlan id */
@@ -542,9 +570,9 @@ extern ushort cdp_appliance_vlan;	/* CDP returned appliance VLAN */
  */
 static inline int is_cdp_packet(const uchar *ethaddr)
 {
-	extern const u8 net_cdp_ethaddr[6];
+	extern const u8 net_cdp_ethaddr[ARP_HLEN];
 
-	return memcmp(ethaddr, net_cdp_ethaddr, 6) == 0;
+	return memcmp(ethaddr, net_cdp_ethaddr, ARP_HLEN) == 0;
 }
 #endif
 

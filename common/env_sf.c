@@ -19,16 +19,16 @@
 #include <dm/device-internal.h>
 
 #ifndef CONFIG_ENV_SPI_BUS
-# define CONFIG_ENV_SPI_BUS	0
+# define CONFIG_ENV_SPI_BUS	CONFIG_SF_DEFAULT_BUS
 #endif
 #ifndef CONFIG_ENV_SPI_CS
-# define CONFIG_ENV_SPI_CS	0
+# define CONFIG_ENV_SPI_CS	CONFIG_SF_DEFAULT_CS
 #endif
 #ifndef CONFIG_ENV_SPI_MAX_HZ
-# define CONFIG_ENV_SPI_MAX_HZ	1000000
+# define CONFIG_ENV_SPI_MAX_HZ	CONFIG_SF_DEFAULT_SPEED
 #endif
 #ifndef CONFIG_ENV_SPI_MODE
-# define CONFIG_ENV_SPI_MODE	SPI_MODE_3
+# define CONFIG_ENV_SPI_MODE	CONFIG_SF_DEFAULT_MODE
 #endif
 
 #ifdef CONFIG_ENV_OFFSET_REDUND
@@ -55,9 +55,9 @@ int saveenv(void)
 #ifdef CONFIG_DM_SPI_FLASH
 	struct udevice *new;
 
+	/* speed and mode will be read from DT */
 	ret = spi_flash_probe_bus_cs(CONFIG_ENV_SPI_BUS, CONFIG_ENV_SPI_CS,
-				     CONFIG_ENV_SPI_MAX_HZ,
-				     CONFIG_ENV_SPI_MODE, &new);
+				     0, 0, &new);
 	if (ret) {
 		set_default_env("!spi_flash_probe_bus_cs() failed");
 		return 1;
@@ -225,7 +225,7 @@ void env_relocate_spec(void)
 	ret = env_import((char *)ep, 0);
 	if (!ret) {
 		error("Cannot import environment: errno = %d\n", errno);
-		set_default_env("env_import failed");
+		set_default_env("!env_import failed");
 	}
 
 err_read:
@@ -245,9 +245,9 @@ int saveenv(void)
 #ifdef CONFIG_DM_SPI_FLASH
 	struct udevice *new;
 
+	/* speed and mode will be read from DT */
 	ret = spi_flash_probe_bus_cs(CONFIG_ENV_SPI_BUS, CONFIG_ENV_SPI_CS,
-				     CONFIG_ENV_SPI_MAX_HZ,
-				     CONFIG_ENV_SPI_MODE, &new);
+				     0, 0, &new);
 	if (ret) {
 		set_default_env("!spi_flash_probe_bus_cs() failed");
 		return 1;

@@ -4,18 +4,23 @@
  *
  * (C) Copyright 2009-2016 Freescale Semiconductor, Inc.
  *
+ * Copyright 2017 NXP
+ *
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <bootm.h>
 #include <common.h>
 #include <netdev.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <asm/io.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/crm_regs.h>
+#if defined(CONFIG_VIDEO_IMXDCSS)
+#include <asm/arch/video_common.h>
+#endif
 #include <imx_thermal.h>
 #include <ipu_pixfmt.h>
 #include <thermal.h>
@@ -64,6 +69,11 @@ static char *get_reset_cause(void)
 #ifdef CONFIG_MX7
 	case 0x00100:
 		return "WDOG4";
+	case 0x00200:
+		return "TEMPSENSE";
+#elif defined(CONFIG_IMX8M)
+	case 0x00100:
+		return "WDOG2";
 	case 0x00200:
 		return "TEMPSENSE";
 #else
@@ -141,6 +151,10 @@ unsigned imx_ddr_size(void)
 const char *get_imx_type(u32 imxtype)
 {
 	switch (imxtype) {
+	case MXC_CPU_IMX8MQ:
+		return "8MQ";	/* Quad-core version of the imx8m */
+	case MXC_CPU_MX7S:
+		return "7S";	/* Single-core version of the mx7 */
 	case MXC_CPU_MX7D:
 		return "7D";	/* Dual-core version of the mx7 */
 	case MXC_CPU_MX6QP:
@@ -155,10 +169,10 @@ const char *get_imx_type(u32 imxtype)
 		return "6DL";	/* Dual Lite version of the mx6 */
 	case MXC_CPU_MX6SOLO:
 		return "6SOLO";	/* Solo version of the mx6 */
-	case MXC_CPU_MX6SLL:
-		return "6SLL";	/* Solo-Lite-Lite version of the mx6 */
 	case MXC_CPU_MX6SL:
 		return "6SL";	/* Solo-Lite version of the mx6 */
+	case MXC_CPU_MX6SLL:
+		return "6SLL";	/* SLL version of the mx6 */
 	case MXC_CPU_MX6SX:
 		return "6SX";   /* SoloX version of the mx6 */
 	case MXC_CPU_MX6UL:
@@ -185,7 +199,7 @@ int print_cpuinfo(void)
 
 	cpurev = get_cpu_rev();
 
-#if defined(CONFIG_IMX_THERMAL)
+#if defined(CONFIG_IMX_THERMAL) || defined(CONFIG_NXP_TMU)
 	struct udevice *thermal_dev;
 	int cpu_tmp, minc, maxc, ret;
 
@@ -208,7 +222,7 @@ int print_cpuinfo(void)
 		mxc_get_clock(MXC_ARM_CLK) / 1000000);
 #endif
 
-#if defined(CONFIG_IMX_THERMAL)
+#if defined(CONFIG_IMX_THERMAL) || defined(CONFIG_NXP_TMU)
 	puts("CPU:   ");
 	switch (get_cpu_temp_grade(&minc, &maxc)) {
 	case TEMP_AUTOMOTIVE:
@@ -225,17 +239,22 @@ int print_cpuinfo(void)
 		break;
 	}
 	printf("(%dC to %dC)", minc, maxc);
+#if	defined(CONFIG_NXP_TMU)
+	ret = uclass_get_device_by_name(UCLASS_THERMAL, "cpu-thermal", &thermal_dev);
+#else
 	ret = uclass_get_device(UCLASS_THERMAL, 0, &thermal_dev);
+#endif
 	if (!ret) {
 		ret = thermal_get_temp(thermal_dev, &cpu_tmp);
 
 		if (!ret)
-			printf(" at %dC\n", cpu_tmp);
+			printf(" at %dC", cpu_tmp);
 		else
-			debug(" - invalid sensor data\n");
+			debug(" - invalid sensor data");
 	} else {
-		debug(" - invalid sensor device\n");
+		debug(" - invalid sensor device");
 	}
+	printf("\n");
 #endif
 
 #if defined(CONFIG_DBG_MONITOR)
@@ -273,7 +292,7 @@ int cpu_mmc_init(bd_t *bis)
 }
 #endif
 
-#ifndef CONFIG_MX7
+#if !(defined(CONFIG_MX7) || defined(CONFIG_IMX8M))
 u32 get_ahb_clk(void)
 {
 	struct mxc_ccm_reg *imx_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
@@ -309,8 +328,12 @@ void arch_preboot_os(void)
 #if defined(CONFIG_VIDEO_MXS)
 	lcdif_power_down();
 #endif
+#if defined(CONFIG_VIDEO_IMXDCSS)
+	imx8m_fb_disable();
+#endif
 }
 
+#ifndef CONFIG_IMX8M
 void set_chipselect_size(int const cs_size)
 {
 	unsigned int reg;
@@ -341,3 +364,4 @@ void set_chipselect_size(int const cs_size)
 
 	writel(reg, &iomuxc_regs->gpr[1]);
 }
+#endif

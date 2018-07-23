@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2014-2016 Freescale Semiconductor, Inc.
+ * (C) Copyright 2014 Freescale Semiconductor, Inc.
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
@@ -23,11 +23,20 @@
 #define MXC_CPU_MX6D		0x6A
 #define MXC_CPU_MX6DP		0x68
 #define MXC_CPU_MX6QP		0x69
+#define MXC_CPU_MX7S		0x71 /* dummy ID */
 #define MXC_CPU_MX7D		0x72
+#define MXC_CPU_MX7ULP		0xE1 /* dummy ID */
+#define MXC_CPU_IMX8MQ		0x82
+#define MXC_CPU_IMX8QM		0x91 /* dummy ID */
+#define MXC_CPU_IMX8QXP		0x92 /* dummy ID */
+#define MXC_CPU_IMX8DX		0x93 /* dummy ID */
 #define MXC_CPU_VF610		0xF6 /* dummy ID */
 
 #define MXC_SOC_MX6		0x60
 #define MXC_SOC_MX7		0x70
+#define MXC_SOC_IMX8M		0x80
+#define MXC_SOC_IMX8		0x90 /* dummy */
+#define MXC_SOC_MX7ULP		0xE0 /* dummy */
 
 #define CHIP_REV_1_0            0x10
 #define CHIP_REV_1_1            0x11
@@ -36,6 +45,9 @@
 #define CHIP_REV_2_0            0x20
 #define CHIP_REV_2_5            0x25
 #define CHIP_REV_3_0            0x30
+
+#define CHIP_REV_A				0x0
+#define CHIP_REV_B				0x1
 
 #define BOARD_REV_1_0           0x0
 #define BOARD_REV_2_0           0x1

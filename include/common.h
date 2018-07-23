@@ -15,9 +15,15 @@ typedef volatile unsigned long	vu_long;
 typedef volatile unsigned short vu_short;
 typedef volatile unsigned char	vu_char;
 
+/* Allow sharing constants with type modifiers between C and assembly. */
+#define _AC(X, Y)       (X##Y)
+
 #include <config.h>
+#include <errno.h>
+#include <time.h>
 #include <asm-offsets.h>
 #include <linux/bitops.h>
+#include <linux/delay.h>
 #include <linux/types.h>
 #include <linux/string.h>
 #include <linux/stringify.h>
@@ -100,6 +106,13 @@ typedef volatile unsigned char	vu_char;
 #define _DEBUG	0
 #endif
 
+#ifdef CONFIG_SPL_BUILD
+#define _SPL_BUILD	1
+#else
+#define _SPL_BUILD	0
+#endif
+
+/* Define this at the top of a file to add a prefix to debug messages */
 #ifndef pr_fmt
 #define pr_fmt(fmt) fmt
 #endif
@@ -115,8 +128,13 @@ typedef volatile unsigned char	vu_char;
 			printf(pr_fmt(fmt), ##args);	\
 	} while (0)
 
+/* Show a message if DEBUG is defined in a file */
 #define debug(fmt, args...)			\
 	debug_cond(_DEBUG, fmt, ##args)
+
+/* Show a message if not in SPL */
+#define warn_non_spl(fmt, args...)			\
+	debug_cond(!_SPL_BUILD, fmt, ##args)
 
 /*
  * An assertion is run-time check done in debug mode only. If DEBUG is not
@@ -266,14 +284,7 @@ int mac_read_from_eeprom(void);
 extern u8 __dtb_dt_begin[];	/* embedded device tree blob */
 int set_cpu_clk_info(void);
 int mdm_init(void);
-#if defined(CONFIG_DISPLAY_CPUINFO)
 int print_cpuinfo(void);
-#else
-static inline int print_cpuinfo(void)
-{
-	return 0;
-}
-#endif
 int update_flash_size(int flash_size);
 int arch_early_init_r(void);
 
@@ -334,9 +345,6 @@ int	source (ulong addr, const char *fit_uname);
 extern ulong load_addr;		/* Default Load Address */
 extern ulong save_addr;		/* Default Save Address */
 extern ulong save_size;		/* Default Save Size */
-
-/* common/cmd_doc.c */
-void	doc_probe(unsigned long physadr);
 
 /* common/cmd_net.c */
 int do_tftpb(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
@@ -566,12 +574,6 @@ void ddr_enable_ecc(unsigned int dram_size);
 #endif
 #endif
 
-/*
- * Return the current value of a monotonically increasing microsecond timer.
- * Granularity may be larger than 1us if hardware does not support this.
- */
-ulong timer_get_us(void);
-
 /* $(CPU)/cpu.c */
 static inline int cpumask_next(int cpu, unsigned int mask)
 {
@@ -591,7 +593,17 @@ int	cpu_num_dspcores(void);
 u32	cpu_mask      (void);
 u32	cpu_dsp_mask(void);
 int	is_core_valid (unsigned int);
-int	probecpu      (void);
+
+/**
+ * arch_cpu_init() - basic cpu-dependent setup for an architecture
+ *
+ * This is called after early malloc is available. It should handle any
+ * CPU- or SoC- specific init needed to continue the init sequence. See
+ * board_f.c for where it is called. If this is not provided, a default
+ * version (which does nothing) will be used.
+ */
+int arch_cpu_init(void);
+
 int	checkcpu      (void);
 int	checkicache   (void);
 int	checkdcache   (void);
@@ -599,12 +611,8 @@ void	upmconfig     (unsigned int, unsigned int *, unsigned int);
 ulong	get_tbclk     (void);
 void	reset_misc    (void);
 void	reset_cpu     (ulong addr);
-#if defined (CONFIG_OF_LIBFDT) && defined (CONFIG_OF_BOARD_SETUP)
 void ft_cpu_setup(void *blob, bd_t *bd);
-#ifdef CONFIG_PCI
 void ft_pci_setup(void *blob, bd_t *bd);
-#endif
-#endif
 
 void smp_set_core_boot_addr(unsigned long addr, int corenr);
 void smp_kick_all_cpus(void);
@@ -663,10 +671,8 @@ int get_serial_clock(void);
 #if defined(CONFIG_MPC85xx)
 typedef MPC85xx_SYS_INFO sys_info_t;
 void	get_sys_info  ( sys_info_t * );
-#  if defined(CONFIG_OF_LIBFDT)
-	void ft_fixup_cpu(void *, u64);
-	void ft_fixup_num_cores(void *);
-#  endif
+void ft_fixup_cpu(void *, u64);
+void ft_fixup_num_cores(void *);
 #endif
 #if defined(CONFIG_MPC86xx)
 typedef MPC86xx_SYS_INFO sys_info_t;
@@ -716,7 +722,6 @@ void	external_interrupt (struct pt_regs *);
 void	irq_install_handler(int, interrupt_handler_t *, void *);
 void	irq_free_handler   (int);
 void	reset_timer	   (void);
-ulong	get_timer	   (ulong base);
 
 /* Return value of monotonic microsecond timer */
 unsigned long timer_get_us(void);
@@ -772,7 +777,6 @@ uint64_t get_ticks(void);
 void	wait_ticks    (unsigned long);
 
 /* arch/$(ARCH)/lib/time.c */
-void	__udelay      (unsigned long);
 ulong	usec2ticks    (unsigned long usec);
 ulong	ticks2usec    (unsigned long ticks);
 int	init_timebase (void);
@@ -816,7 +820,7 @@ void gzwrite_progress_finish(int retcode,
  *				for files under 4GiB
  */
 int gzwrite(unsigned char *src, int len,
-	    struct block_dev_desc *dev,
+	    struct blk_desc *dev,
 	    unsigned long szwritebuf,
 	    u64 startoffs,
 	    u64 szexpected);
@@ -828,10 +832,6 @@ int ulz4fn(const void *src, size_t srcn, void *dst, size_t *dstn);
 void qsort(void *base, size_t nmemb, size_t size,
 	   int(*compar)(const void *, const void *));
 int strcmp_compar(const void *, const void *);
-
-/* lib/time.c */
-void	udelay        (unsigned long);
-void mdelay(unsigned long);
 
 /* lib/uuid.c */
 #include <uuid.h>
@@ -862,17 +862,20 @@ int	getc(void);
 int	tstc(void);
 
 /* stdout */
-#if defined(CONFIG_SPL_BUILD) && !defined(CONFIG_SPL_SERIAL_SUPPORT)
-#define	putc(...) do { } while (0)
-#define puts(...) do { } while (0)
-#define printf(...) do { } while (0)
-#define vprintf(...) do { } while (0)
-#else
+#if !defined(CONFIG_SPL_BUILD) || \
+	(defined(CONFIG_TPL_BUILD) && defined(CONFIG_TPL_SERIAL_SUPPORT)) || \
+	(defined(CONFIG_SPL_BUILD) && !defined(CONFIG_TPL_BUILD) && \
+		defined(CONFIG_SPL_SERIAL_SUPPORT))
 void	putc(const char c);
 void	puts(const char *s);
 int	printf(const char *fmt, ...)
 		__attribute__ ((format (__printf__, 1, 2)));
 int	vprintf(const char *fmt, va_list args);
+#else
+#define	putc(...) do { } while (0)
+#define puts(...) do { } while (0)
+#define printf(...) do { } while (0)
+#define vprintf(...) do { } while (0)
 #endif
 
 /* stderr */
@@ -911,7 +914,7 @@ static inline struct in_addr getenv_ip(char *var)
 
 int	pcmcia_init (void);
 
-#ifdef CONFIG_STATUS_LED
+#ifdef CONFIG_LED_STATUS
 # include <status_led.h>
 #endif
 
@@ -929,7 +932,16 @@ int cpu_disable(int nr);
 int cpu_release(int nr, int argc, char * const argv[]);
 #endif
 
-#endif /* __ASSEMBLY__ */
+#ifdef CONFIG_CMD_READ
+int do_raw_read(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
+#endif
+
+#else	/* __ASSEMBLY__ */
+
+/* Drop a C type modifier (like in 3UL) for constants used in assembly. */
+#define _AC(X, Y)       X
+
+#endif	/* __ASSEMBLY__ */
 
 #ifdef CONFIG_PPC
 /*
@@ -940,6 +952,9 @@ int cpu_release(int nr, int argc, char * const argv[]);
 #endif
 
 /* Put only stuff here that the assembler can digest */
+
+/* Declare an unsigned long constant digestable both by C and an assembler. */
+#define UL(x)           _AC(x, UL)
 
 #ifdef CONFIG_POST
 #define CONFIG_HAS_POST

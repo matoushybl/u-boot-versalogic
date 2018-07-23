@@ -16,10 +16,8 @@
 #define CONFIG_HOSTNAME		aristainetos2
 #define CONFIG_BOARDNAME	"aristainetos2-revB"
 
-#define CONFIG_BOARD_LATE_INIT
-
 #define CONFIG_MXC_UART_BASE	UART2_BASE
-#define CONFIG_CONSOLE_DEV	"ttymxc1"
+#define CONSOLE_DEV	"ttymxc1"
 
 #define CONFIG_FEC_XCV_TYPE		RGMII
 #define CONFIG_PHY_MICREL_KSZ9031

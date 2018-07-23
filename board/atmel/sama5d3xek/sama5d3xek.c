@@ -68,7 +68,7 @@ void sama5d3xek_nand_hw_init(void)
 }
 #endif
 
-#ifndef CONFIG_SYS_NO_FLASH
+#ifdef CONFIG_MTD_NOR_FLASH
 static void sama5d3xek_nor_hw_init(void)
 {
 	struct at91_smc *smc = (struct at91_smc *)ATMEL_BASE_SMC;
@@ -207,7 +207,7 @@ void lcd_show_board_info(void)
 	nand_size = 0;
 #ifdef CONFIG_NAND_ATMEL
 	for (i = 0; i < CONFIG_SYS_MAX_NAND_DEVICE; i++)
-		nand_size += nand_info[i].size;
+		nand_size += nand_info[i]->size;
 #endif
 	lcd_printf("%ld MB SDRAM, %lld MB NAND\n",
 		   dram_size >> 20, nand_size >> 20);
@@ -236,7 +236,7 @@ int board_init(void)
 #ifdef CONFIG_NAND_ATMEL
 	sama5d3xek_nand_hw_init();
 #endif
-#ifndef CONFIG_SYS_NO_FLASH
+#ifdef CONFIG_MTD_NOR_FLASH
 	sama5d3xek_nor_hw_init();
 #endif
 #ifdef CONFIG_CMD_USB

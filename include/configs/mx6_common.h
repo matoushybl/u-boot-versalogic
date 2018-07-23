@@ -11,7 +11,7 @@
 #ifndef CONFIG_MX6UL
 #define CONFIG_ARM_ERRATA_743622
 #if (defined(CONFIG_MX6QP) || defined(CONFIG_MX6Q) ||\
-defined(CONFIG_MX6DL)) && !defined(CONFIG_MX6SOLO)
+defined(CONFIG_MX6DL)) && !defined(CONFIG_MX6S)
 #define CONFIG_ARM_ERRATA_751472
 #define CONFIG_ARM_ERRATA_794072
 #define CONFIG_ARM_ERRATA_761320
@@ -36,11 +36,9 @@ defined(CONFIG_MX6DL)) && !defined(CONFIG_MX6SOLO)
 #define CONFIG_MX6Q
 #endif
 
-#ifdef CONFIG_MX6SOLO
+#ifdef CONFIG_MX6S
 #define CONFIG_MX6DL
 #endif
-
-#define CONFIG_SYS_NO_FLASH
 
 #define CONFIG_SYS_BOOTM_LEN	0x1000000
 
@@ -52,8 +50,6 @@ defined(CONFIG_MX6DL)) && !defined(CONFIG_MX6SOLO)
 #define CONFIG_MX6
 #endif
 
-#define CONFIG_DISPLAY_BOARDINFO
-#define CONFIG_DISPLAY_CPUINFO
 #define CONFIG_SYS_FSL_CLK
 
 /* ATAGs */
@@ -63,7 +59,8 @@ defined(CONFIG_MX6DL)) && !defined(CONFIG_MX6SOLO)
 #define CONFIG_REVISION_TAG
 
 /* Boot options */
-#if (defined(CONFIG_MX6SX) || defined(CONFIG_MX6SL) || defined(CONFIG_MX6UL) || defined(CONFIG_MX6SLL))
+#if (defined(CONFIG_MX6SX) || defined(CONFIG_MX6SL) || \
+	defined(CONFIG_MX6UL) || defined(CONFIG_MX6SLL))
 #define CONFIG_LOADADDR		0x80800000
 #ifndef CONFIG_SYS_TEXT_BASE
 #define CONFIG_SYS_TEXT_BASE	0x87800000
@@ -76,30 +73,16 @@ defined(CONFIG_MX6DL)) && !defined(CONFIG_MX6SOLO)
 #endif
 #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
 
-#ifndef CONFIG_BOOTDELAY
-#define CONFIG_BOOTDELAY	3
-#endif
-
 /* allow to overwrite serial and ethaddr */
 #define CONFIG_ENV_OVERWRITE
 #define CONFIG_CONS_INDEX       1
 #define CONFIG_BAUDRATE         115200
 
 /* Filesystems and image support */
-#define CONFIG_OF_LIBFDT
-#define CONFIG_CMD_BOOTZ
 #define CONFIG_SUPPORT_RAW_INITRD
-#define CONFIG_CMD_FS_GENERIC
-#define CONFIG_DOS_PARTITION
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_EXT4
-#define CONFIG_CMD_EXT4_WRITE
-#define CONFIG_CMD_FAT
 
 /* Miscellaneous configurable options */
-#undef CONFIG_CMD_IMLS
 #define CONFIG_SYS_LONGHELP
-#define CONFIG_SYS_HUSH_PARSER
 #define CONFIG_CMDLINE_EDITING
 #define CONFIG_AUTO_COMPLETE
 #define CONFIG_SYS_CBSIZE	512
@@ -107,16 +90,12 @@ defined(CONFIG_MX6DL)) && !defined(CONFIG_MX6SOLO)
 #define CONFIG_SYS_BARGSIZE	CONFIG_SYS_CBSIZE
 
 #ifndef CONFIG_SYS_DCACHE_OFF
-#define CONFIG_CMD_CACHE
 #endif
 
 /* GPIO */
 #define CONFIG_MXC_GPIO
 
 /* MMC */
-#define CONFIG_MMC
-#define CONFIG_CMD_MMC
-#define CONFIG_GENERIC_MMC
 #define CONFIG_BOUNCE_BUFFER
 #define CONFIG_FSL_ESDHC
 #define CONFIG_FSL_USDHC
@@ -126,8 +105,26 @@ defined(CONFIG_MX6DL)) && !defined(CONFIG_MX6SOLO)
 #define CONFIG_CMD_FUSE
 #define CONFIG_MXC_OCOTP
 
+/* uncomment for SECURE mode support */
+/* #define CONFIG_SECURE_BOOT */
+
+/* Secure boot (HAB) support */
+#ifdef CONFIG_SECURE_BOOT
+#define CONFIG_CSF_SIZE			0x4000
+#ifdef CONFIG_SPL_BUILD
+#define CONFIG_SPL_DRIVERS_MISC_SUPPORT
+#endif
+#endif
+
 /* LDO Bypass */
 #ifndef CONFIG_MX6SLL
 #define CONFIG_LDO_BYPASS_CHECK
+#endif
+
+#ifdef CONFIG_IMX_OPTEE
+#define CONFIG_SYS_MEM_TOP_HIDE	SZ_32M
+#define TEE_ENV "tee=yes\0"
+#else
+#define TEE_ENV "tee=no\0"
 #endif
 #endif

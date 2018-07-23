@@ -52,7 +52,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define SPI_PAD_CTRL (PAD_CTL_DSE_3P3V_49OHM | PAD_CTL_SRE_SLOW | PAD_CTL_HYS)
 
-#ifdef CONFIG_SYS_I2C_MXC
+#ifdef CONFIG_SYS_I2C
 #define PC MUX_PAD_CTRL(I2C_PAD_CTRL)
 /* I2C1 for PMIC */
 struct i2c_pads_info i2c_pad_info1 = {
@@ -190,9 +190,11 @@ void do_enable_parallel_lcd(struct display_info_t const *dev)
 	imx_iomux_v3_setup_multiple_pads(pwm_pads, ARRAY_SIZE(pwm_pads));
 
 	/* Power up the LCD */
+	gpio_request(IMX_GPIO_NR(3, 4), "lcd_pwr");
 	gpio_direction_output(IMX_GPIO_NR(3, 4) , 1);
 
 	/* Set Brightness to high */
+	gpio_request(IMX_GPIO_NR(1, 1), "lcd_backlight");
 	gpio_direction_output(IMX_GPIO_NR(1, 1) , 1);
 }
 
@@ -341,12 +343,15 @@ int board_mmc_init(bd_t *bis)
 		case 0:
 			imx_iomux_v3_setup_multiple_pads(
 				usdhc1_emmc_pads, ARRAY_SIZE(usdhc1_emmc_pads));
+			gpio_request(USDHC1_PWR_GPIO, "usdhc1_pwr");
 			gpio_direction_output(USDHC1_PWR_GPIO, 1);
 			usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC_CLK);
 			break;
 		case 1:
 			imx_iomux_v3_setup_multiple_pads(
 				usdhc2_pads, ARRAY_SIZE(usdhc2_pads));
+			gpio_request(USDHC2_PWR_GPIO, "usdhc2_pwr");
+			gpio_request(USDHC2_CD_GPIO, "usdhc2_cd");
 			gpio_direction_input(USDHC2_CD_GPIO);
 			gpio_direction_output(USDHC2_PWR_GPIO, 1);
 			usdhc_cfg[1].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);
@@ -354,6 +359,8 @@ int board_mmc_init(bd_t *bis)
 		case 2:
 			imx_iomux_v3_setup_multiple_pads(
 				usdhc3_pads, ARRAY_SIZE(usdhc3_pads));
+			gpio_request(USDHC3_PWR_GPIO, "usdhc3_pwr");
+			gpio_request(USDHC3_CD_GPIO, "usdhc3_cd");
 			gpio_direction_input(USDHC3_CD_GPIO);
 			gpio_direction_output(USDHC3_PWR_GPIO, 1);
 			usdhc_cfg[2].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
@@ -424,7 +431,7 @@ int board_phy_config(struct phy_device *phydev)
 }
 #endif
 
-#ifdef CONFIG_SYS_USE_SPINOR
+#ifdef CONFIG_MXC_SPI
 iomux_v3_cfg_t const ecspi1_pads[] = {
 	MX7D_PAD_ECSPI1_SCLK__ECSPI1_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
 	MX7D_PAD_ECSPI1_MOSI__ECSPI1_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
@@ -438,6 +445,7 @@ void setup_spinor(void)
 {
 	imx_iomux_v3_setup_multiple_pads(ecspi1_pads,
 					 ARRAY_SIZE(ecspi1_pads));
+	gpio_request(IMX_GPIO_NR(4, 19), "ecspi1_cs");
 	gpio_direction_output(IMX_GPIO_NR(4, 19), 0);
 }
 
@@ -448,6 +456,7 @@ int board_spi_cs_gpio(unsigned bus, unsigned cs)
 #endif
 
 #ifdef CONFIG_USB_EHCI_MX7
+#ifndef CONFIG_DM_USB
 iomux_v3_cfg_t const usb_otg1_pads[] = {
 	MX7D_PAD_GPIO1_IO05__USB_OTG1_PWR | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
@@ -462,18 +471,21 @@ static void setup_usb(void)
 	imx_iomux_v3_setup_multiple_pads(usb_otg2_pads, ARRAY_SIZE(usb_otg2_pads));
 }
 #endif
+#endif
 
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
 
-#ifdef CONFIG_SYS_I2C_MXC
+#ifdef CONFIG_SYS_I2C
 	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
 	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);
 #endif
 
 #ifdef CONFIG_USB_EHCI_MX7
+#ifndef CONFIG_DM_USB
 	setup_usb();
+#endif
 #endif
 
 	return 0;
@@ -487,11 +499,12 @@ int board_init(void)
 	/* Reset peripherals */
 	imx_iomux_v3_setup_multiple_pads(per_rst_pads, ARRAY_SIZE(per_rst_pads));
 
-	gpio_direction_output(IMX_GPIO_NR(1, 3) , 0);
+	gpio_request(IMX_GPIO_NR(1, 3), "per_rst");
+	gpio_direction_output(IMX_GPIO_NR(1, 3), 0);
 	udelay(500);
 	gpio_set_value(IMX_GPIO_NR(1, 3), 1);
 
-#ifdef CONFIG_SYS_USE_SPINOR
+#ifdef CONFIG_MXC_SPI
 	setup_spinor();
 #endif
 
@@ -556,8 +569,47 @@ int power_init_board(void)
 	/* set SW1B normal voltage to 0.975V */
 	pmic_reg_read(p, PFUZE3000_SW1BVOLT, &reg);
 	reg &= ~0x1f;
-	reg |= PFUZE3000_SW1AB_SETP(975);
+	reg |= PFUZE3000_SW1AB_SETP(9750);
 	pmic_reg_write(p, PFUZE3000_SW1BVOLT, reg);
+
+	return 0;
+}
+#elif defined(CONFIG_DM_PMIC_PFUZE100)
+int power_init_board(void)
+{
+	struct udevice *dev;
+	int ret, dev_id, rev_id, reg;
+
+	ret = pmic_get("pfuze3000", &dev);
+	if (ret == -ENODEV)
+		return 0;
+	if (ret != 0)
+		return ret;
+
+	dev_id = pmic_reg_read(dev, PFUZE3000_DEVICEID);
+	rev_id = pmic_reg_read(dev, PFUZE3000_REVID);
+	printf("PMIC: PFUZE3000 DEV_ID=0x%x REV_ID=0x%x\n", dev_id, rev_id);
+
+	/* disable Low Power Mode during standby mode */
+	reg = pmic_reg_read(dev, PFUZE3000_LDOGCTL);
+	reg |= 0x1;
+	pmic_reg_write(dev, PFUZE3000_LDOGCTL, reg);
+
+	/* SW1A/1B mode set to APS/APS */
+	reg = 0x8;
+	pmic_reg_write(dev, PFUZE3000_SW1AMODE, reg);
+	pmic_reg_write(dev, PFUZE3000_SW1BMODE, reg);
+
+	/* SW1A/1B standby voltage set to 0.975V */
+	reg = 0xb;
+	pmic_reg_write(dev, PFUZE3000_SW1ASTBY, reg);
+	pmic_reg_write(dev, PFUZE3000_SW1BSTBY, reg);
+
+	/* set SW1B normal voltage to 0.975V */
+	reg = pmic_reg_read(dev, PFUZE3000_SW1BVOLT);
+	reg &= ~0x1f;
+	reg |= PFUZE3000_SW1AB_SETP(9750);
+	pmic_reg_write(dev, PFUZE3000_SW1BVOLT, reg);
 
 	return 0;
 }

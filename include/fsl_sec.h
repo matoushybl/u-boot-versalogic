@@ -24,7 +24,7 @@
 #define sec_in16(a)       in_be16(a)
 #define sec_clrbits32     clrbits_be32
 #define sec_setbits32     setbits_be32
-#else
+#elif defined(CONFIG_SYS_FSL_HAS_SEC)
 #error Neither CONFIG_SYS_FSL_SEC_LE nor CONFIG_SYS_FSL_SEC_BE is defined
 #endif
 
@@ -215,6 +215,8 @@ struct sg_entry {
 #define SG_ENTRY_OFFSET_SHIFT	0
 };
 
+#define BLOB_SIZE(x)		((x) + 32 + 16) /* Blob buffer size */
+
 #if defined(CONFIG_MX6) || defined(CONFIG_MX7)
 /* Job Ring Base Address */
 #define JR_BASE_ADDR(x) (CONFIG_SYS_FSL_SEC_ADDR + 0x1000 * (x + 1))
@@ -274,8 +276,6 @@ struct sg_entry {
 #define PERM			0x0000B008      /* Clear on release, lock SMAP
 						 * lock SMAG group 1 Blob */
 
-#define BLOB_SIZE(x)       (x + 32 + 16) /* Blob buffer size */
-
 /* HAB WRAPPED KEY header */
 #define WRP_HDR_SIZE		0x08
 #define HDR_TAG			0x81
@@ -294,7 +294,12 @@ struct sg_entry {
 
 #endif
 
-int sec_init(void);
+#define FSL_CAAM_MP_PUBK_BYTES		    64
+#define FSL_CAAM_MP_PRVK_BYTES		    32
+#define FSL_CAAM_MP_MES_DGST_BYTES	    32
+
+#define FSL_CAAM_ORSR_JRa_OFFSET	0x102c
+#define FSL_CAAM_MAX_JR_SIZE		4
 
 /* blob_dek:
  * Encapsulates the src in a secure blob and stores it dst
@@ -305,6 +310,14 @@ int sec_init(void);
  */
 int blob_dek(const u8 *src, u8 *dst, u8 len);
 
+int gen_mppubk(u8 *dst);
+
+int sign_mppubk(const u8 *m, int data_size, u8 *dgst, u8 *c, u8 *d);
+
+#if defined(CONFIG_ARCH_C29X)
+int sec_init_idx(uint8_t);
+#endif
+int sec_init(void);
 #endif
 
 #endif /* __FSL_SEC_H */

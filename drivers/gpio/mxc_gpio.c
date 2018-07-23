@@ -6,6 +6,7 @@
  * Stefano Babic, DENX Software Engineering, <sbabic@denx.de>
  *
  * Copyright (C) 2015-2016 Freescale Semiconductor, Inc.
+ * Copyright 2017 NXP
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
@@ -39,7 +40,11 @@ struct mxc_bank_info {
 };
 
 #ifndef CONFIG_DM_GPIO
+#if defined(CONFIG_IMX8)
+#define GPIO_TO_PORT(n)		((n / 32) - 1)
+#else
 #define GPIO_TO_PORT(n)		(n / 32)
+#endif
 
 /* GPIO port description */
 static unsigned long gpio_ports[] = {
@@ -48,20 +53,26 @@ static unsigned long gpio_ports[] = {
 	[2] = GPIO3_BASE_ADDR,
 #if defined(CONFIG_MX25) || defined(CONFIG_MX27) || defined(CONFIG_MX51) || \
 		defined(CONFIG_MX53) || defined(CONFIG_MX6) || \
-		defined(CONFIG_MX7)
+		defined(CONFIG_MX7) || defined(CONFIG_IMX8) || \
+		defined(CONFIG_IMX8M)
 	[3] = GPIO4_BASE_ADDR,
 #endif
 #if defined(CONFIG_MX27) || defined(CONFIG_MX53) || defined(CONFIG_MX6) || \
-		defined(CONFIG_MX7)
+		defined(CONFIG_MX7) || defined(CONFIG_IMX8) || \
+		defined(CONFIG_IMX8M)
 	[4] = GPIO5_BASE_ADDR,
-#ifndef CONFIG_MX6UL
+#if !(defined(CONFIG_MX6UL) || defined(CONFIG_IMX8M))
 	[5] = GPIO6_BASE_ADDR,
 #endif
 #endif
-#if defined(CONFIG_MX53) || defined(CONFIG_MX6) || defined(CONFIG_MX7)
+#if defined(CONFIG_MX53) || defined(CONFIG_MX6) || defined(CONFIG_MX7) || \
+		defined(CONFIG_IMX8)
 #ifndef CONFIG_MX6UL
 	[6] = GPIO7_BASE_ADDR,
 #endif
+#endif
+#if defined(CONFIG_IMX8)
+	[7] = GPIO8_BASE_ADDR,
 #endif
 };
 
@@ -169,7 +180,7 @@ int gpio_get_value(unsigned gpio)
 
 	regs = (struct gpio_regs *)gpio_ports[port];
 
-	val = (readl(&regs->gpio_psr) >> gpio) & 0x01;
+	val = (readl(&regs->gpio_dr) >> gpio) & 0x01;
 
 	RDC_SPINLOCK_DOWN(port);
 
@@ -254,7 +265,7 @@ static void mxc_gpio_bank_set_value(struct gpio_regs *regs, int offset,
 
 static int mxc_gpio_bank_get_value(struct gpio_regs *regs, int offset)
 {
-	return (readl(&regs->gpio_psr) >> offset) & 0x01;
+	return (readl(&regs->gpio_dr) >> offset) & 0x01;
 }
 
 /* set GPIO pin 'gpio' as an input */
@@ -330,7 +341,11 @@ static int mxc_gpio_probe(struct udevice *dev)
 	char name[18], *str;
 
 	banknum = plat->bank_index;
+#if defined(CONFIG_IMX8)
+	sprintf(name, "GPIO%d_", banknum);
+#else
 	sprintf(name, "GPIO%d_", banknum + 1);
+#endif
 	str = strdup(name);
 	if (!str)
 		return -ENOMEM;
@@ -397,15 +412,22 @@ static const struct mxc_gpio_plat mxc_plat[] = {
 	{ 1, (struct gpio_regs *)GPIO2_BASE_ADDR },
 	{ 2, (struct gpio_regs *)GPIO3_BASE_ADDR },
 #if defined(CONFIG_MX25) || defined(CONFIG_MX27) || defined(CONFIG_MX51) || \
-		defined(CONFIG_MX53) || defined(CONFIG_MX6)
+		defined(CONFIG_MX53) || defined(CONFIG_MX6) || \
+		defined(CONFIG_IMX8) || defined(CONFIG_IMX8M)
 	{ 3, (struct gpio_regs *)GPIO4_BASE_ADDR },
 #endif
-#if defined(CONFIG_MX27) || defined(CONFIG_MX53) || defined(CONFIG_MX6)
+#if defined(CONFIG_MX27) || defined(CONFIG_MX53) || defined(CONFIG_MX6) || \
+		defined(CONFIG_IMX8) || defined(CONFIG_IMX8M)
 	{ 4, (struct gpio_regs *)GPIO5_BASE_ADDR },
+#ifndef CONFIG_IMX8M
 	{ 5, (struct gpio_regs *)GPIO6_BASE_ADDR },
 #endif
-#if defined(CONFIG_MX53) || defined(CONFIG_MX6)
+#endif
+#if defined(CONFIG_MX53) || defined(CONFIG_MX6) || defined(CONFIG_IMX8)
 	{ 6, (struct gpio_regs *)GPIO7_BASE_ADDR },
+#endif
+#if defined(CONFIG_IMX8)
+	{ 7, (struct gpio_regs *)GPIO8_BASE_ADDR },
 #endif
 };
 
@@ -414,15 +436,22 @@ U_BOOT_DEVICES(mxc_gpios) = {
 	{ "gpio_mxc", &mxc_plat[1] },
 	{ "gpio_mxc", &mxc_plat[2] },
 #if defined(CONFIG_MX25) || defined(CONFIG_MX27) || defined(CONFIG_MX51) || \
-		defined(CONFIG_MX53) || defined(CONFIG_MX6)
+		defined(CONFIG_MX53) || defined(CONFIG_MX6) || \
+		defined(CONFIG_IMX8) || defined(CONFIG_IMX8M)
 	{ "gpio_mxc", &mxc_plat[3] },
 #endif
-#if defined(CONFIG_MX27) || defined(CONFIG_MX53) || defined(CONFIG_MX6)
+#if defined(CONFIG_MX27) || defined(CONFIG_MX53) || defined(CONFIG_MX6) || \
+		defined(CONFIG_IMX8) || defined(CONFIG_IMX8M)
 	{ "gpio_mxc", &mxc_plat[4] },
+#ifndef CONFIG_IMX8M
 	{ "gpio_mxc", &mxc_plat[5] },
 #endif
-#if defined(CONFIG_MX53) || defined(CONFIG_MX6)
+#endif
+#if defined(CONFIG_MX53) || defined(CONFIG_MX6) || defined(CONFIG_IMX8)
 	{ "gpio_mxc", &mxc_plat[6] },
+#endif
+#if defined(CONFIG_IMX8)
+	{ "gpio_mxc", &mxc_plat[7] },
 #endif
 };
 #endif

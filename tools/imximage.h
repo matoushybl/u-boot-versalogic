@@ -2,17 +2,14 @@
  * (C) Copyright 2009
  * Stefano Babic, DENX Software Engineering, sbabic@denx.de.
  *
- * Copyright (C) 2014-2016 Freescale Semiconductor, Inc.
- *
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _IMXIMAGE_H_
 #define _IMXIMAGE_H_
 
-#include <config.h>
 #define MAX_HW_CFG_SIZE_V2 220 /* Max number of registers imx can set for v2 */
-#define MAX_PLUGIN_CODE_SIZE (16*1024)
+#define MAX_PLUGIN_CODE_SIZE (64 * 1024)
 #define MAX_HW_CFG_SIZE_V1 60  /* Max number of registers imx can set for v1 */
 #define APP_CODE_BARKER	0xB1
 #define DCD_BARKER	0xB17219E9
@@ -61,6 +58,7 @@
 #define DCD_WRITE_DATA_COMMAND_TAG	0xCC
 #define DCD_WRITE_DATA_PARAM		0x4
 #define DCD_WRITE_CLR_BIT_PARAM	0xC
+#define DCD_WRITE_SET_BIT_PARAM	0x1C
 #define DCD_CHECK_DATA_COMMAND_TAG	0xCF
 #define DCD_CHECK_BITS_SET_PARAM	0x14
 #define DCD_CHECK_BITS_CLR_PARAM	0x04
@@ -72,6 +70,7 @@ enum imximage_cmd {
 	CMD_BOOT_OFFSET,
 	CMD_WRITE_DATA,
 	CMD_WRITE_CLR_BIT,
+	CMD_WRITE_SET_BIT,
 	CMD_CHECK_BITS_SET,
 	CMD_CHECK_BITS_CLR,
 	CMD_CSF,
@@ -178,9 +177,7 @@ typedef struct {
 	boot_data_t boot_data;
 	union {
 		dcd_v2_t dcd_table;
-#ifdef CONFIG_USE_PLUGIN
 		char plugin_code[MAX_PLUGIN_CODE_SIZE];
-#endif
 	} data;
 } imx_header_v2_t;
 

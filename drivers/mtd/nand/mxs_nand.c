@@ -9,6 +9,7 @@
  *
  * Copyright (C) 2010-2016 Freescale Semiconductor, Inc.
  * Copyright (C) 2008 Embedded Alley Solutions, Inc.
+ * Copyright 2017 NXP
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
@@ -18,7 +19,7 @@
 #include <linux/mtd/nand.h>
 #include <linux/types.h>
 #include <malloc.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
@@ -30,14 +31,19 @@
 #define	MXS_NAND_DMA_DESCRIPTOR_COUNT		4
 
 #define	MXS_NAND_CHUNK_DATA_CHUNK_SIZE		512
-#if (defined(CONFIG_MX6) || defined(CONFIG_MX7))
+#if (defined(CONFIG_MX6) || defined(CONFIG_MX7) || defined(CONFIG_IMX8) || defined(CONFIG_IMX8M))
 #define	MXS_NAND_CHUNK_DATA_CHUNK_SIZE_SHIFT	2
 #else
 #define	MXS_NAND_CHUNK_DATA_CHUNK_SIZE_SHIFT	0
 #endif
 #define	MXS_NAND_METADATA_SIZE			10
 #define	MXS_NAND_BITS_PER_ECC_LEVEL		13
+
+#if !defined(CONFIG_SYS_CACHELINE_SIZE) || CONFIG_SYS_CACHELINE_SIZE < 32
 #define	MXS_NAND_COMMAND_BUFFER_SIZE		32
+#else
+#define	MXS_NAND_COMMAND_BUFFER_SIZE		CONFIG_SYS_CACHELINE_SIZE
+#endif
 
 #define	MXS_NAND_BCH_TIMEOUT			10000
 
@@ -82,21 +88,21 @@ static int galois_field = 13;
 #ifndef	CONFIG_SYS_DCACHE_OFF
 static void mxs_nand_flush_data_buf(struct mxs_nand_info *info)
 {
-	uint32_t addr = (uint32_t)info->data_buf;
+	uint32_t addr = (uintptr_t)info->data_buf;
 
 	flush_dcache_range(addr, addr + info->data_buf_size);
 }
 
 static void mxs_nand_inval_data_buf(struct mxs_nand_info *info)
 {
-	uint32_t addr = (uint32_t)info->data_buf;
+	uint32_t addr = (uintptr_t)info->data_buf;
 
 	invalidate_dcache_range(addr, addr + info->data_buf_size);
 }
 
 static void mxs_nand_flush_cmd_buf(struct mxs_nand_info *info)
 {
-	uint32_t addr = (uint32_t)info->cmd_buf;
+	uint32_t addr = (uintptr_t)info->cmd_buf;
 
 	flush_dcache_range(addr, addr + MXS_NAND_COMMAND_BUFFER_SIZE);
 }
@@ -192,13 +198,13 @@ static bool mxs_nand_bbm_in_data_chunk(struct mtd_info *mtd, int gf_len,
  */
 static int mxs_nand_get_ecc_strength(struct mtd_info *mtd)
 {
-	struct nand_chip *chip = mtd->priv;
+	struct nand_chip *chip = mtd_to_nand(mtd);
 	uint32_t page_oob_size = mtd->oobsize;
 	int meta = MXS_NAND_METADATA_SIZE;
 	int max_ecc_strength_supported;
 
 	/* Refer to Chapter 17 for i.MX6DQ, Chapter 18 for i.MX6SX */
-	if (is_cpu_type(MXC_CPU_MX6SX) || is_soc_type(MXC_SOC_MX7))
+	if (is_mx6sx() || is_mx7() || is_imx8() || is_imx8m())
 		max_ecc_strength_supported = 62;
 	else
 		max_ecc_strength_supported = 40;
@@ -352,8 +358,8 @@ static int mxs_nand_wait_for_bch_complete(void)
  */
 static void mxs_nand_cmd_ctrl(struct mtd_info *mtd, int data, unsigned int ctrl)
 {
-	struct nand_chip *nand = mtd->priv;
-	struct mxs_nand_info *nand_info = nand->priv;
+	struct nand_chip *nand = mtd_to_nand(mtd);
+	struct mxs_nand_info *nand_info = nand_get_controller_data(nand);
 	struct mxs_dma_desc *d;
 	uint32_t channel = MXS_DMA_CHANNEL_AHB_APBH_GPMI0 + nand_info->cur_chip;
 	int ret;
@@ -431,8 +437,8 @@ static void mxs_nand_cmd_ctrl(struct mtd_info *mtd, int data, unsigned int ctrl)
  */
 static int mxs_nand_device_ready(struct mtd_info *mtd)
 {
-	struct nand_chip *chip = mtd->priv;
-	struct mxs_nand_info *nand_info = chip->priv;
+	struct nand_chip *chip = mtd_to_nand(mtd);
+	struct mxs_nand_info *nand_info = nand_get_controller_data(chip);
 	struct mxs_gpmi_regs *gpmi_regs =
 		(struct mxs_gpmi_regs *)MXS_GPMI_BASE;
 	uint32_t tmp;
@@ -448,8 +454,8 @@ static int mxs_nand_device_ready(struct mtd_info *mtd)
  */
 static void mxs_nand_select_chip(struct mtd_info *mtd, int chip)
 {
-	struct nand_chip *nand = mtd->priv;
-	struct mxs_nand_info *nand_info = nand->priv;
+	struct nand_chip *nand = mtd_to_nand(mtd);
+	struct mxs_nand_info *nand_info = nand_get_controller_data(nand);
 
 	nand_info->cur_chip = chip;
 }
@@ -498,8 +504,8 @@ static void mxs_nand_swap_block_mark(struct mtd_info *mtd,
  */
 static void mxs_nand_read_buf(struct mtd_info *mtd, uint8_t *buf, int length)
 {
-	struct nand_chip *nand = mtd->priv;
-	struct mxs_nand_info *nand_info = nand->priv;
+	struct nand_chip *nand = mtd_to_nand(mtd);
+	struct mxs_nand_info *nand_info = nand_get_controller_data(nand);
 	struct mxs_dma_desc *d;
 	uint32_t channel = MXS_DMA_CHANNEL_AHB_APBH_GPMI0 + nand_info->cur_chip;
 	int ret;
@@ -582,8 +588,8 @@ rtn:
 static void mxs_nand_write_buf(struct mtd_info *mtd, const uint8_t *buf,
 				int length)
 {
-	struct nand_chip *nand = mtd->priv;
-	struct mxs_nand_info *nand_info = nand->priv;
+	struct nand_chip *nand = mtd_to_nand(mtd);
+	struct mxs_nand_info *nand_info = nand_get_controller_data(nand);
 	struct mxs_dma_desc *d;
 	uint32_t channel = MXS_DMA_CHANNEL_AHB_APBH_GPMI0 + nand_info->cur_chip;
 	int ret;
@@ -686,7 +692,7 @@ static int mxs_nand_ecc_read_page(struct mtd_info *mtd, struct nand_chip *nand,
 					uint8_t *buf, int oob_required,
 					int page)
 {
-	struct mxs_nand_info *nand_info = nand->priv;
+	struct mxs_nand_info *nand_info = nand_get_controller_data(nand);
 	struct mxs_dma_desc *d;
 	struct mxs_bch_regs *bch_regs = (struct mxs_bch_regs *)MXS_BCH_BASE;
 	uint32_t channel = MXS_DMA_CHANNEL_AHB_APBH_GPMI0 + nand_info->cur_chip;
@@ -798,8 +804,8 @@ static int mxs_nand_ecc_read_page(struct mtd_info *mtd, struct nand_chip *nand,
 			continue;
 
 		if (status[i] == 0xff) {
-			if (is_mx6dqp() || is_soc_type(MXC_SOC_MX7) ||
-			    is_cpu_type(MXC_CPU_MX6UL))
+			if (is_mx6dqp() || is_mx7() ||
+			    is_mx6ul() || is_imx8() || is_imx8m())
 				if (readl(&bch_regs->hw_bch_debug1))
 					flag = 1;
 			continue;
@@ -849,9 +855,9 @@ rtn:
  */
 static int mxs_nand_ecc_write_page(struct mtd_info *mtd,
 				struct nand_chip *nand, const uint8_t *buf,
-				int oob_required)
+				int oob_required, int page)
 {
-	struct mxs_nand_info *nand_info = nand->priv;
+	struct mxs_nand_info *nand_info = nand_get_controller_data(nand);
 	struct mxs_dma_desc *d;
 	uint32_t channel = MXS_DMA_CHANNEL_AHB_APBH_GPMI0 + nand_info->cur_chip;
 	int ret;
@@ -917,8 +923,8 @@ rtn:
 static int mxs_nand_hook_read_oob(struct mtd_info *mtd, loff_t from,
 					struct mtd_oob_ops *ops)
 {
-	struct nand_chip *chip = mtd->priv;
-	struct mxs_nand_info *nand_info = chip->priv;
+	struct nand_chip *chip = mtd_to_nand(mtd);
+	struct mxs_nand_info *nand_info = nand_get_controller_data(chip);
 	int ret;
 
 	if (ops->mode == MTD_OPS_RAW)
@@ -942,8 +948,8 @@ static int mxs_nand_hook_read_oob(struct mtd_info *mtd, loff_t from,
 static int mxs_nand_hook_write_oob(struct mtd_info *mtd, loff_t to,
 					struct mtd_oob_ops *ops)
 {
-	struct nand_chip *chip = mtd->priv;
-	struct mxs_nand_info *nand_info = chip->priv;
+	struct nand_chip *chip = mtd_to_nand(mtd);
+	struct mxs_nand_info *nand_info = nand_get_controller_data(chip);
 	int ret;
 
 	if (ops->mode == MTD_OPS_RAW)
@@ -966,8 +972,8 @@ static int mxs_nand_hook_write_oob(struct mtd_info *mtd, loff_t to,
  */
 static int mxs_nand_hook_block_markbad(struct mtd_info *mtd, loff_t ofs)
 {
-	struct nand_chip *chip = mtd->priv;
-	struct mxs_nand_info *nand_info = chip->priv;
+	struct nand_chip *chip = mtd_to_nand(mtd);
+	struct mxs_nand_info *nand_info = nand_get_controller_data(chip);
 	int ret;
 
 	nand_info->marking_block_bad = 1;
@@ -1026,7 +1032,7 @@ static int mxs_nand_hook_block_markbad(struct mtd_info *mtd, loff_t ofs)
 static int mxs_nand_ecc_read_oob(struct mtd_info *mtd, struct nand_chip *nand,
 				int page)
 {
-	struct mxs_nand_info *nand_info = nand->priv;
+	struct mxs_nand_info *nand_info = nand_get_controller_data(nand);
 
 	/*
 	 * First, fill in the OOB buffer. If we're doing a raw read, we need to
@@ -1061,7 +1067,7 @@ static int mxs_nand_ecc_read_oob(struct mtd_info *mtd, struct nand_chip *nand,
 static int mxs_nand_ecc_write_oob(struct mtd_info *mtd, struct nand_chip *nand,
 					int page)
 {
-	struct mxs_nand_info *nand_info = nand->priv;
+	struct mxs_nand_info *nand_info = nand_get_controller_data(nand);
 	uint8_t block_mark = 0;
 
 	/*
@@ -1103,7 +1109,7 @@ static int mxs_nand_ecc_write_oob(struct mtd_info *mtd, struct nand_chip *nand,
  * Thus, this function is only called when we want *all* blocks to look good,
  * so it *always* return success.
  */
-static int mxs_nand_block_bad(struct mtd_info *mtd, loff_t ofs, int getchip)
+static int mxs_nand_block_bad(struct mtd_info *mtd, loff_t ofs)
 {
 	return 0;
 }
@@ -1118,16 +1124,18 @@ static int mxs_nand_block_bad(struct mtd_info *mtd, loff_t ofs, int getchip)
  * counted, so we know the physical geometry. This enables us to make some
  * important configuration decisions.
  *
- * The return value of this function propogates directly back to this driver's
+ * The return value of this function propagates directly back to this driver's
  * call to nand_scan(). Anything other than zero will cause this driver to
  * tear everything down and declare failure.
  */
 static int mxs_nand_scan_bbt(struct mtd_info *mtd)
 {
-	struct nand_chip *nand = mtd->priv;
-	struct mxs_nand_info *nand_info = nand->priv;
+	struct nand_chip *nand = mtd_to_nand(mtd);
+	struct mxs_nand_info *nand_info = nand_get_controller_data(nand);
 	struct mxs_bch_regs *bch_regs = (struct mxs_bch_regs *)MXS_BCH_BASE;
 	uint32_t tmp;
+
+
 
 	/* calculate ecc_strength, bbm_chunk, eec_for meta, if necessary */
 	mxs_nand_get_ecc_strength(mtd);
@@ -1161,8 +1169,8 @@ static int mxs_nand_scan_bbt(struct mtd_info *mtd)
 	writel(tmp, &bch_regs->hw_bch_flash0layout1);
 
 	/* Set erase threshold to ecc strength for mx6ul, mx6qp and mx7 */
-	if (is_mx6dqp() || is_soc_type(MXC_SOC_MX7) ||
-	    is_cpu_type(MXC_CPU_MX6UL))
+	if (is_mx6dqp() || is_mx7() ||
+	    is_mx6ul() || is_imx8() || is_imx8m())
 		writel(BCH_MODE_ERASE_THRESHOLD(ecc_strength),
 		       &bch_regs->hw_bch_mode);
 
@@ -1328,7 +1336,7 @@ int board_nand_init(struct nand_chip *nand)
 
 	memset(&fake_ecc_layout, 0, sizeof(fake_ecc_layout));
 
-	nand->priv = nand_info;
+	nand_set_controller_data(nand, nand_info);
 	nand->options |= NAND_NO_SUBPAGE_WRITE;
 
 	nand->cmd_ctrl		= mxs_nand_cmd_ctrl;

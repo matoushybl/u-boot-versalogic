@@ -11,8 +11,6 @@
 
 #define CONFIG_SKIP_LOWLEVEL_INIT
 
-#define CONFIG_SYS_CACHELINE_SIZE	64
-
 /*
  * Memory configuration
  * (these must be defined elsewhere)
@@ -53,8 +51,6 @@
 #define CONFIG_ENV_SIZE			0x2000
 #define CONFIG_ENV_IS_NOWHERE
 
-#define CONFIG_SYS_NO_FLASH	/* Not using NAND/NOR unmanaged flash */
-
 /* console configuration */
 #define CONFIG_SYS_CBSIZE		1024	/* Console buffer size */
 #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
@@ -62,17 +58,8 @@
 #define CONFIG_SYS_MAXARGS		64
 #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
 
-/*
- * One partition type must be defined for part.c
- * This is necessary for the fatls command to work on an SD card
- * for example.
- */
-#define CONFIG_DOS_PARTITION
-
 /* version string, parser, etc */
-#define CONFIG_VERSION_VARIABLE
 #define CONFIG_AUTO_COMPLETE
-#define CONFIG_SYS_HUSH_PARSER
 #define CONFIG_CMDLINE_EDITING
 #define CONFIG_COMMAND_HISTORY
 #define CONFIG_SYS_LONGHELP
@@ -81,13 +68,7 @@
 #define CONFIG_MX_CYCLIC
 
 /* Commands */
-#define CONFIG_CMD_ASKENV
-#define CONFIG_CMD_CACHE
-#define CONFIG_CMD_FAT
 #define CONFIG_FAT_WRITE
-
-/* Enable devicetree support */
-#define CONFIG_OF_LIBFDT
 
 /* SHA hashing */
 #define CONFIG_CMD_HASH
@@ -96,9 +77,6 @@
 #define CONFIG_SHA256
 
 /* Enable Time Command */
-#define CONFIG_CMD_TIME
-
-#define CONFIG_CMD_BOOTZ
 
 /* Misc utility code */
 #define CONFIG_BOUNCE_BUFFER

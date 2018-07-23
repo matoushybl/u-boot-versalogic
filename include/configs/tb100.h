@@ -30,8 +30,6 @@
 #define CONFIG_SYS_BOOTM_LEN		SZ_32M
 #define CONFIG_SYS_LOAD_ADDR		0x82000000
 
-#define CONFIG_SYS_NO_FLASH
-
 /*
  * UART configuration
  */
@@ -65,10 +63,6 @@
 /*
  * Command line configuration
  */
-#define CONFIG_CMD_DHCP
-#define CONFIG_CMD_PING
-
-#define CONFIG_OF_LIBFDT
 
 #define CONFIG_AUTO_COMPLETE
 #define CONFIG_SYS_MAXARGS		16
@@ -83,7 +77,6 @@
 /*
  * Environment configuration
  */
-#define CONFIG_BOOTDELAY		3
 #define CONFIG_BOOTFILE			"uImage"
 #define CONFIG_BOOTARGS			"console=ttyS0,115200n8"
 #define CONFIG_LOADADDR			CONFIG_SYS_LOAD_ADDR

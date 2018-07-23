@@ -21,16 +21,11 @@
 #include <power/pmic.h>
 #include <power/pfuze3000_pmic.h>
 #include "../common/pfuze.h"
-#ifdef CONFIG_SYS_I2C_MXC
+#ifdef CONFIG_SYS_I2C
 #include <i2c.h>
 #include <asm/imx-common/mxc_i2c.h>
 #endif
 #include <asm/arch/crm_regs.h>
-
-#ifdef CONFIG_VIDEO_MXS
-#include <linux/fb.h>
-#include <mxsfb.h>
-#endif
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -64,7 +59,7 @@ DECLARE_GLOBAL_DATA_PTR;
 	PAD_CTL_PUS_PU100KOHM)
 
 
-#ifdef CONFIG_SYS_I2C_MXC
+#ifdef CONFIG_SYS_I2C
 #define PC MUX_PAD_CTRL(I2C_PAD_CTRL)
 /* I2C1 for PMIC */
 struct i2c_pads_info i2c_pad_info1 = {
@@ -121,7 +116,7 @@ static iomux_v3_cfg_t const usdhc1_pads[] = {
 	MX7D_PAD_SD1_RESET_B__GPIO5_IO2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 };
 
-#ifdef CONFIG_SYS_USE_EIMNOR
+#ifdef CONFIG_MTD_NOR_FLASH
 static iomux_v3_cfg_t const eimnor_pads[] = {
 	MX7D_PAD_LCD_DATA00__EIM_DATA0 | MUX_PAD_CTRL(WEIM_NOR_PAD_CTRL),
 	MX7D_PAD_LCD_DATA01__EIM_DATA1 | MUX_PAD_CTRL(WEIM_NOR_PAD_CTRL),
@@ -231,7 +226,7 @@ static void setup_iomux_uart(void)
 }
 
 #ifdef CONFIG_FSL_QSPI
-
+#ifndef CONFIG_DM_SPI
 static iomux_v3_cfg_t const quadspi_pads[] = {
 	MX7D_PAD_EPDC_DATA00__QSPI_A_DATA0 | MUX_PAD_CTRL(QSPI_PAD_CTRL),
 	MX7D_PAD_EPDC_DATA01__QSPI_A_DATA1 | MUX_PAD_CTRL(QSPI_PAD_CTRL),
@@ -252,11 +247,14 @@ static iomux_v3_cfg_t const quadspi_pads[] = {
 	MX7D_PAD_EPDC_DATA15__QSPI_B_SS1_B | MUX_PAD_CTRL(QSPI_PAD_CTRL),
 
 };
+#endif
 
 int board_qspi_init(void)
 {
+#ifndef CONFIG_DM_SPI
 	/* Set the iomux */
 	imx_iomux_v3_setup_multiple_pads(quadspi_pads, ARRAY_SIZE(quadspi_pads));
+#endif
 
 	/* Set the clock */
 	set_clk_qspi();
@@ -265,7 +263,7 @@ int board_qspi_init(void)
 }
 #endif
 
-#ifdef CONFIG_SYS_USE_NAND
+#ifdef CONFIG_NAND_MXS
 static iomux_v3_cfg_t const gpmi_pads[] = {
 	MX7D_PAD_SD3_DATA0__NAND_DATA00 | MUX_PAD_CTRL(NAND_PAD_CTRL),
 	MX7D_PAD_SD3_DATA1__NAND_DATA01 | MUX_PAD_CTRL(NAND_PAD_CTRL),
@@ -343,6 +341,8 @@ int board_mmc_init(bd_t *bis)
 		case 0:
 			imx_iomux_v3_setup_multiple_pads(
 				usdhc1_pads, ARRAY_SIZE(usdhc1_pads));
+			gpio_request(USDHC1_CD_GPIO, "usdhc1_cd");
+			gpio_request(USDHC1_PWR_GPIO, "usdhc1_pwr");
 			gpio_direction_input(USDHC1_CD_GPIO);
 			gpio_direction_output(USDHC1_PWR_GPIO, 0);
 			udelay(500);
@@ -418,7 +418,7 @@ int board_phy_config(struct phy_device *phydev)
 }
 #endif
 
-#ifdef CONFIG_SYS_USE_SPINOR
+#ifdef CONFIG_MXC_SPI
 iomux_v3_cfg_t const ecspi1_pads[] = {
 	MX7D_PAD_UART3_RX_DATA__ECSPI1_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
 	MX7D_PAD_UART3_TX_DATA__ECSPI1_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
@@ -442,6 +442,8 @@ int board_spi_cs_gpio(unsigned bus, unsigned cs)
 #endif
 
 #ifdef CONFIG_USB_EHCI_MX7
+#ifndef CONFIG_DM_USB
+
 iomux_v3_cfg_t const usb_otg1_pads[] = {
 	MX7D_PAD_GPIO1_IO05__USB_OTG1_PWR | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
@@ -456,18 +458,21 @@ static void setup_usb(void)
 	imx_iomux_v3_setup_multiple_pads(usb_otg2_pads, ARRAY_SIZE(usb_otg2_pads));
 }
 #endif
+#endif
 
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
 
-#ifdef CONFIG_SYS_I2C_MXC
+#ifdef CONFIG_SYS_I2C
 	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
 	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);
 #endif
 
 #ifdef CONFIG_USB_EHCI_MX7
+#ifndef CONFIG_DM_USB
 	setup_usb();
+#endif
 #endif
 	return 0;
 }
@@ -480,19 +485,20 @@ int board_init(void)
 	/* Reset peripherals */
 	imx_iomux_v3_setup_multiple_pads(per_rst_pads, ARRAY_SIZE(per_rst_pads));
 
+	gpio_request(IMX_GPIO_NR(1, 3), "per rst");
 	gpio_direction_output(IMX_GPIO_NR(1, 3) , 0);
 	udelay(500);
 	gpio_set_value(IMX_GPIO_NR(1, 3), 1);
 
-#ifdef CONFIG_SYS_USE_SPINOR
+#ifdef CONFIG_MXC_SPI
 	setup_spinor();
 #endif
 
-#ifdef CONFIG_SYS_USE_EIMNOR
+#ifdef CONFIG_MTD_NOR_FLASH
 	setup_eimnor();
 #endif
 
-#ifdef CONFIG_SYS_USE_NAND
+#ifdef CONFIG_NAND_MXS
 	setup_gpmi_nand();
 #endif
 
@@ -555,13 +561,51 @@ int power_init_board(void)
 	/* set SW1B normal voltage to 0.975V */
 	pmic_reg_read(p, PFUZE3000_SW1BVOLT, &reg);
 	reg &= ~0x1f;
-	reg |= PFUZE3000_SW1AB_SETP(975);
+	reg |= PFUZE3000_SW1AB_SETP(9750);
 	pmic_reg_write(p, PFUZE3000_SW1BVOLT, reg);
 
 	return 0;
 }
-#endif
+#elif defined(CONFIG_DM_PMIC_PFUZE100)
+int power_init_board(void)
+{
+	struct udevice *dev;
+	int ret, dev_id, rev_id, reg;
 
+	ret = pmic_get("pfuze3000", &dev);
+	if (ret == -ENODEV)
+		return 0;
+	if (ret != 0)
+		return ret;
+
+	dev_id = pmic_reg_read(dev, PFUZE3000_DEVICEID);
+	rev_id = pmic_reg_read(dev, PFUZE3000_REVID);
+	printf("PMIC: PFUZE3000 DEV_ID=0x%x REV_ID=0x%x\n", dev_id, rev_id);
+
+	/* disable Low Power Mode during standby mode */
+	reg = pmic_reg_read(dev, PFUZE3000_LDOGCTL);
+	reg |= 0x1;
+	pmic_reg_write(dev, PFUZE3000_LDOGCTL, reg);
+
+	/* SW1A/1B mode set to APS/APS */
+	reg = 0x8;
+	pmic_reg_write(dev, PFUZE3000_SW1AMODE, reg);
+	pmic_reg_write(dev, PFUZE3000_SW1BMODE, reg);
+
+	/* SW1A/1B standby voltage set to 0.975V */
+	reg = 0xb;
+	pmic_reg_write(dev, PFUZE3000_SW1ASTBY, reg);
+	pmic_reg_write(dev, PFUZE3000_SW1BSTBY, reg);
+
+	/* set SW1B normal voltage to 0.975V */
+	reg = pmic_reg_read(dev, PFUZE3000_SW1BVOLT);
+	reg &= ~0x1f;
+	reg |= PFUZE3000_SW1AB_SETP(9750);
+	pmic_reg_write(dev, PFUZE3000_SW1BVOLT, reg);
+
+	return 0;
+}
+#endif
 
 int board_late_init(void)
 {

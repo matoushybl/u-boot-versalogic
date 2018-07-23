@@ -12,13 +12,26 @@
 #undef CONFIG_CONS_INDEX
 #define CONFIG_CONS_INDEX       2
 
-#define CONFIG_DISPLAY_BOARDINFO
+#define I2C_MUX_CH_VOL_MONITOR		0xa
+#define I2C_VOL_MONITOR_ADDR		0x38
+#define CONFIG_VOL_MONITOR_IR36021_READ
+#define CONFIG_VOL_MONITOR_IR36021_SET
+
+#define CONFIG_VID_FLS_ENV		"ls2080ardb_vdd_mv"
+#ifndef CONFIG_SPL_BUILD
+#define CONFIG_VID
+#endif
+/* step the IR regulator in 5mV increments */
+#define IR_VDD_STEP_DOWN		5
+#define IR_VDD_STEP_UP			5
+/* The lowest and highest voltage allowed for LS2080ARDB */
+#define VDD_MV_MIN			819
+#define VDD_MV_MAX			1212
 
 #ifndef __ASSEMBLY__
 unsigned long get_board_sys_clk(void);
 #endif
 
-#define CONFIG_SYS_FSL_CLK
 #define CONFIG_SYS_CLK_FREQ		get_board_sys_clk()
 #define CONFIG_DDR_CLK_FREQ		133333333
 #define COUNTER_FREQUENCY_REAL		(CONFIG_SYS_CLK_FREQ/4)
@@ -46,11 +59,7 @@ unsigned long get_board_sys_clk(void);
 #define CONFIG_LIBATA
 #define CONFIG_SCSI_AHCI
 #define CONFIG_SCSI_AHCI_PLAT
-#define CONFIG_CMD_SCSI
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_EXT2
-#define CONFIG_DOS_PARTITION
-#define CONFIG_BOARD_LATE_INIT
+#define CONFIG_SCSI
 
 #define CONFIG_SYS_SATA1			AHCI_BASE_ADDR1
 #define CONFIG_SYS_SATA2			AHCI_BASE_ADDR2
@@ -90,7 +99,7 @@ unsigned long get_board_sys_clk(void);
 #define CONFIG_SYS_NOR_FTIM3	0x04000000
 #define CONFIG_SYS_IFC_CCR	0x01000000
 
-#ifndef CONFIG_SYS_NO_FLASH
+#ifdef CONFIG_MTD_NOR_FLASH
 #define CONFIG_FLASH_CFI_DRIVER
 #define CONFIG_SYS_FLASH_CFI
 #define CONFIG_SYS_FLASH_USE_BUFFER_WRITE
@@ -110,7 +119,6 @@ unsigned long get_board_sys_clk(void);
 #define CONFIG_NAND_FSL_IFC
 #define CONFIG_SYS_NAND_MAX_ECCPOS	256
 #define CONFIG_SYS_NAND_MAX_OOBFREE	2
-
 
 #define CONFIG_SYS_NAND_CSPR_EXT	(0x0)
 #define CONFIG_SYS_NAND_CSPR	(CSPR_PHYS_ADDR(CONFIG_SYS_NAND_BASE_PHYS) \
@@ -256,9 +264,9 @@ unsigned long get_board_sys_clk(void);
 
 /* SPI */
 #ifdef CONFIG_FSL_DSPI
-#define CONFIG_CMD_SF
 #define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_BAR
+#define CONFIG_SPI_FLASH_STMICRO
 #endif
 
 /*
@@ -280,24 +288,16 @@ unsigned long get_board_sys_clk(void);
 #define CONFIG_SYS_EEPROM_PAGE_WRITE_DELAY_MS 5
 
 #define CONFIG_FSL_MEMAC
-#define CONFIG_PCI		/* Enable PCIE */
-#define CONFIG_PCIE_LAYERSCAPE	/* Use common FSL Layerscape PCIe code */
 
 #ifdef CONFIG_PCI
-#define CONFIG_PCI_PNP
 #define CONFIG_PCI_SCAN_SHOW
 #define CONFIG_CMD_PCI
 #endif
 
 /*  MMC  */
-#define CONFIG_MMC
 #ifdef CONFIG_MMC
-#define CONFIG_CMD_MMC
 #define CONFIG_FSL_ESDHC
 #define CONFIG_SYS_FSL_MMC_HAS_CAPBLT_VS33
-#define CONFIG_GENERIC_MMC
-#define CONFIG_CMD_FAT
-#define CONFIG_DOS_PARTITION
 #endif
 
 #define CONFIG_MISC_INIT_R
@@ -306,19 +306,30 @@ unsigned long get_board_sys_clk(void);
  * USB
  */
 #define CONFIG_HAS_FSL_XHCI_USB
-#define CONFIG_USB_XHCI
 #define CONFIG_USB_XHCI_FSL
-#define CONFIG_USB_XHCI_DWC3
 #define CONFIG_USB_MAX_CONTROLLER_COUNT         2
 #define CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS      2
-#define CONFIG_CMD_USB
-#define CONFIG_USB_STORAGE
-#define CONFIG_CMD_EXT2
+
+#undef CONFIG_CMDLINE_EDITING
+#include <config_distro_defaults.h>
+
+#define BOOT_TARGET_DEVICES(func) \
+	func(USB, usb, 0) \
+	func(MMC, mmc, 0) \
+	func(SCSI, scsi, 0) \
+	func(DHCP, dhcp, na)
+#include <config_distro_bootcmd.h>
 
 /* Initial environment variables */
 #undef CONFIG_EXTRA_ENV_SETTINGS
+#ifdef CONFIG_SECURE_BOOT
 #define CONFIG_EXTRA_ENV_SETTINGS		\
 	"hwconfig=fsl_ddr:bank_intlv=auto\0"	\
+	"scriptaddr=0x80800000\0"		\
+	"kernel_addr_r=0x81000000\0"		\
+	"pxefile_addr_r=0x81000000\0"		\
+	"fdt_addr_r=0x88000000\0"		\
+	"ramdisk_addr_r=0x89000000\0"		\
 	"loadaddr=0x80100000\0"			\
 	"kernel_addr=0x100000\0"		\
 	"ramdisk_addr=0x800000\0"		\
@@ -328,14 +339,48 @@ unsigned long get_board_sys_clk(void);
 	"kernel_start=0x581100000\0"		\
 	"kernel_load=0xa0000000\0"		\
 	"kernel_size=0x2800000\0"		\
-	"mcinitcmd=fsl_mc start mc 0x580300000"	\
-	" 0x580800000 \0"
+	"fdtfile=fsl-ls2080a-rdb.dtb\0"		\
+	"mcinitcmd=esbc_validate 0x580c80000;"  \
+	"esbc_validate 0x580cc0000;"            \
+	"fsl_mc start mc 0x580300000"           \
+	" 0x580800000 \0"                       \
+	BOOTENV
+#else
+#define CONFIG_EXTRA_ENV_SETTINGS		\
+	"hwconfig=fsl_ddr:bank_intlv=auto\0"	\
+	"scriptaddr=0x80800000\0"		\
+	"kernel_addr_r=0x81000000\0"		\
+	"pxefile_addr_r=0x81000000\0"		\
+	"fdt_addr_r=0x88000000\0"		\
+	"ramdisk_addr_r=0x89000000\0"		\
+	"loadaddr=0x80100000\0"			\
+	"kernel_addr=0x100000\0"		\
+	"ramdisk_addr=0x800000\0"		\
+	"ramdisk_size=0x2000000\0"		\
+	"fdt_high=0xa0000000\0"			\
+	"initrd_high=0xffffffffffffffff\0"	\
+	"kernel_start=0x581100000\0"		\
+	"kernel_load=0xa0000000\0"		\
+	"kernel_size=0x2800000\0"		\
+	"fdtfile=fsl-ls2080a-rdb.dtb\0"		\
+	"mcinitcmd=fsl_mc start mc 0x580300000" \
+	" 0x580800000 \0"                       \
+	BOOTENV
+#endif
+
 
 #undef CONFIG_BOOTARGS
 #define CONFIG_BOOTARGS		"console=ttyS1,115200 root=/dev/ram0 " \
-				"earlycon=uart8250,mmio,0x21c0600" \
+				"earlycon=uart8250,mmio,0x21c0600 " \
 				"ramdisk_size=0x2000000 default_hugepagesz=2m" \
 				" hugepagesz=2m hugepages=256"
+
+#undef CONFIG_BOOTCOMMAND
+/* Try to boot an on-NOR kernel first, then do normal distro boot */
+#define CONFIG_BOOTCOMMAND "run mcinitcmd && fsl_mc lazyapply dpl 0x580700000" \
+			   " && cp.b $kernel_start $kernel_load $kernel_size" \
+			   " && bootm $kernel_load" \
+			   " || run distro_bootcmd"
 
 /* MAC/PHY configuration */
 #ifdef CONFIG_FSL_MC_ENET
@@ -355,11 +400,14 @@ unsigned long get_board_sys_clk(void);
 #define AQ_PHY_ADDR2		0x01
 #define AQ_PHY_ADDR3		0x02
 #define AQ_PHY_ADDR4		0x03
+#define AQR405_IRQ_MASK		0x36
 
 #define CONFIG_MII
-#define CONFIG_ETHPRIME		"DPNI1"
+#define CONFIG_ETHPRIME		"DPMAC1@xgmii"
 #define CONFIG_PHY_GIGE
 #define CONFIG_PHY_AQUANTIA
 #endif
+
+#include <asm/fsl_secure_boot.h>
 
 #endif /* __LS2_RDB_H */

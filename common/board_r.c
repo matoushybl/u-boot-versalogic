@@ -67,6 +67,7 @@
 #ifdef CONFIG_AVR32
 #include <asm/arch/mmu.h>
 #endif
+#include <efi_loader.h>
 #ifdef CONFIG_FSL_FASTBOOT
 #include <fsl_fastboot.h>
 #endif
@@ -182,6 +183,9 @@ static int initr_reloc_global_data(void)
 	*/
 	gd->fdt_blob += gd->reloc_off;
 #endif
+#ifdef CONFIG_EFI_LOADER
+	efi_runtime_relocate(gd->relocaddr, NULL);
+#endif
 
 	return 0;
 }
@@ -192,7 +196,7 @@ static int initr_serial(void)
 	return 0;
 }
 
-#if defined(CONFIG_PPC) || defined(CONFIG_M68K)
+#if defined(CONFIG_PPC) || defined(CONFIG_M68K) || defined(CONFIG_MIPS)
 static int initr_trap(void)
 {
 	/*
@@ -263,17 +267,6 @@ static int initr_pci(void)
 }
 #endif
 
-#ifdef CONFIG_WINBOND_83C553
-static int initr_w83c553f(void)
-{
-	/*
-	 * Initialise the ISA bridge
-	 */
-	initialise_w83c553f();
-	return 0;
-}
-#endif
-
 static int initr_barrier(void)
 {
 #ifdef CONFIG_PPC
@@ -323,11 +316,13 @@ static int initr_dm(void)
 	/* Save the pre-reloc driver model and start a new one */
 	gd->dm_root_f = gd->dm_root;
 	gd->dm_root = NULL;
+#ifdef CONFIG_TIMER
+	gd->timer = NULL;
+#endif
 	ret = dm_init_and_scan(false);
 	if (ret)
 		return ret;
 #ifdef CONFIG_TIMER_EARLY
-	gd->timer = NULL;
 	ret = dm_timer_init();
 	if (ret)
 		return ret;
@@ -365,7 +360,7 @@ static int initr_manual_reloc_cmdtable(void)
 }
 #endif
 
-#if !defined(CONFIG_SYS_NO_FLASH)
+#if defined(CONFIG_MTD_NOR_FLASH)
 static int initr_flash(void)
 {
 	ulong flash_size = 0;
@@ -595,11 +590,11 @@ static int initr_kgdb(void)
 }
 #endif
 
-#if defined(CONFIG_STATUS_LED)
+#if defined(CONFIG_LED_STATUS)
 static int initr_status_led(void)
 {
-#if defined(STATUS_LED_BOOT)
-	status_led_set(STATUS_LED_BOOT, STATUS_LED_BLINKING);
+#if defined(CONFIG_LED_STATUS_BOOT)
+	status_led_set(CONFIG_LED_STATUS_BOOT, CONFIG_LED_STATUS_BLINKING);
 #else
 	status_led_init();
 #endif
@@ -619,21 +614,12 @@ static int initr_ambapp_print(void)
 }
 #endif
 
-#if defined(CONFIG_CMD_SCSI)
+#if defined(CONFIG_SCSI) && !defined(CONFIG_DM_SCSI)
 static int initr_scsi(void)
 {
 	puts("SCSI:  ");
 	scsi_init();
 
-	return 0;
-}
-#endif
-
-#if defined(CONFIG_CMD_DOC)
-static int initr_doc(void)
-{
-	puts("DOC:   ");
-	doc_init();
 	return 0;
 }
 #endif
@@ -745,9 +731,25 @@ static int initr_fastboot_setup(void)
 
 static int initr_check_fastboot(void)
 {
-	check_fastboot();
+	fastboot_run_bootmode();
 	return 0;
 }
+#endif
+
+#ifdef AVB_RPMB
+static int initr_avbkey(void)
+{
+	return init_avbkey();
+}
+#endif
+
+#ifdef CONFIG_IMX_TRUSTY_OS
+static int initr_tee_setup(void)
+{
+	tee_setup();
+	return 0;
+}
+
 #endif
 
 static int run_main_loop(void)
@@ -770,7 +772,7 @@ static int run_main_loop(void)
  *
  * TODO: perhaps reset the watchdog in the initcall function after each call?
  */
-init_fnc_t init_sequence_r[] = {
+static init_fnc_t init_sequence_r[] = {
 	initr_trace,
 	initr_reloc,
 	/* TODO: could x86/PPC have this also perhaps? */
@@ -810,6 +812,9 @@ init_fnc_t init_sequence_r[] = {
 #ifdef CONFIG_CLOCKS
 	set_cpu_clk_info, /* Setup clock information */
 #endif
+#ifdef CONFIG_EFI_LOADER
+	efi_memory_init,
+#endif
 	stdio_init_tables,
 	initr_serial,
 	initr_announce,
@@ -817,7 +822,7 @@ init_fnc_t init_sequence_r[] = {
 #ifdef CONFIG_NEEDS_MANUAL_RELOC
 	initr_manual_reloc_cmdtable,
 #endif
-#if defined(CONFIG_PPC) || defined(CONFIG_M68K)
+#if defined(CONFIG_PPC) || defined(CONFIG_M68K) || defined(CONFIG_MIPS)
 	initr_trap,
 #endif
 #ifdef CONFIG_ADDR_MAP
@@ -844,14 +849,11 @@ init_fnc_t init_sequence_r[] = {
 	 */
 	initr_pci,
 #endif
-#ifdef CONFIG_WINBOND_83C553
-	initr_w83c553f,
-#endif
 #ifdef CONFIG_ARCH_EARLY_INIT_R
 	arch_early_init_r,
 #endif
 	power_init_board,
-#ifndef CONFIG_SYS_NO_FLASH
+#ifdef CONFIG_MTD_NOR_FLASH
 	initr_flash,
 #endif
 	INIT_FUNC_WATCHDOG_RESET
@@ -917,7 +919,7 @@ init_fnc_t init_sequence_r[] = {
 #if defined(CONFIG_MICROBLAZE) || defined(CONFIG_AVR32) || defined(CONFIG_M68K)
 	timer_init,		/* initialize timer */
 #endif
-#if defined(CONFIG_STATUS_LED)
+#if defined(CONFIG_LED_STATUS)
 	initr_status_led,
 #endif
 	/* PPC has a udelay(20) here dating from 2002. Why? */
@@ -936,13 +938,9 @@ init_fnc_t init_sequence_r[] = {
 	initr_ambapp_print,
 #endif
 #endif
-#ifdef CONFIG_CMD_SCSI
+#if defined(CONFIG_SCSI) && !defined(CONFIG_DM_SCSI)
 	INIT_FUNC_WATCHDOG_RESET
 	initr_scsi,
-#endif
-#ifdef CONFIG_CMD_DOC
-	INIT_FUNC_WATCHDOG_RESET
-	initr_doc,
 #endif
 #ifdef CONFIG_BITBANGMII
 	initr_bbmii,
@@ -982,6 +980,12 @@ init_fnc_t init_sequence_r[] = {
 #if defined(CONFIG_SPARC)
 	prom_init,
 #endif
+#ifdef AVB_RPMB
+	initr_avbkey,
+#endif
+#ifdef CONFIG_IMX_TRUSTY_OS
+	initr_tee_setup,
+#endif
 #ifdef CONFIG_FSL_FASTBOOT
 	initr_check_fastboot,
 #endif
@@ -990,6 +994,16 @@ init_fnc_t init_sequence_r[] = {
 
 void board_init_r(gd_t *new_gd, ulong dest_addr)
 {
+	/*
+	 * Set up the new global data pointer. So far only x86 does this
+	 * here.
+	 * TODO(sjg@chromium.org): Consider doing this for all archs, or
+	 * dropping the new_gd parameter.
+	 */
+#if CONFIG_IS_ENABLED(X86_64)
+	arch_setup_gd(new_gd);
+#endif
+
 #ifdef CONFIG_NEEDS_MANUAL_RELOC
 	int i;
 #endif

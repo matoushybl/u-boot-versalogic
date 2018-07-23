@@ -284,7 +284,10 @@ static int pl01x_serial_setbrg(struct udevice *dev, int baudrate)
 	struct pl01x_serial_platdata *plat = dev_get_platdata(dev);
 	struct pl01x_priv *priv = dev_get_priv(dev);
 
-	pl01x_generic_setbrg(priv->regs, priv->type, plat->clock, baudrate);
+	if (!plat->skip_init) {
+		pl01x_generic_setbrg(priv->regs, priv->type, plat->clock,
+				     baudrate);
+	}
 
 	return 0;
 }
@@ -296,7 +299,10 @@ static int pl01x_serial_probe(struct udevice *dev)
 
 	priv->regs = (struct pl01x_regs *)plat->base;
 	priv->type = plat->type;
-	return pl01x_generic_serial_init(priv->regs, priv->type);
+	if (!plat->skip_init)
+		return pl01x_generic_serial_init(priv->regs, priv->type);
+	else
+		return 0;
 }
 
 static int pl01x_serial_getc(struct udevice *dev)
@@ -348,8 +354,11 @@ static int pl01x_serial_ofdata_to_platdata(struct udevice *dev)
 		return -EINVAL;
 
 	plat->base = addr;
-	plat->clock = fdtdec_get_int(gd->fdt_blob, dev->of_offset, "clock", 1);
+	plat->clock = fdtdec_get_int(gd->fdt_blob, dev_of_offset(dev), "clock",
+				     1);
 	plat->type = dev_get_driver_data(dev);
+	plat->skip_init = fdtdec_get_bool(gd->fdt_blob, dev_of_offset(dev),
+	                                  "skip-init");
 	return 0;
 }
 #endif

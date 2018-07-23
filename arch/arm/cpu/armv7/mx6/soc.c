@@ -2,13 +2,13 @@
  * (C) Copyright 2007
  * Sascha Hauer, Pengutronix
  *
- * (C) Copyright 2009-2016 Freescale Semiconductor, Inc.
+ * (C) Copyright 2009 Freescale Semiconductor, Inc.
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <asm/io.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/clock.h>
@@ -130,11 +130,11 @@ u32 get_cpu_speed_grade_hz(void)
 	val >>= OCOTP_CFG3_SPEED_SHIFT;
 	val &= 0x3;
 
-	if (is_cpu_type(MXC_CPU_MX6UL) || is_cpu_type(MXC_CPU_MX6ULL)) {
+	if (is_mx6ul() || is_mx6ull()) {
 		if (val == OCOTP_CFG3_SPEED_528MHZ)
 			return 528000000;
 		else if (val == OCOTP_CFG3_SPEED_696MHZ)
-			return 69600000;
+			return 696000000;
 		else
 			return 0;
 	}
@@ -142,16 +142,14 @@ u32 get_cpu_speed_grade_hz(void)
 	switch (val) {
 	/* Valid for IMX6DQ */
 	case OCOTP_CFG3_SPEED_1P2GHZ:
-		if (is_cpu_type(MXC_CPU_MX6Q) || is_cpu_type(MXC_CPU_MX6D) ||
-			is_cpu_type(MXC_CPU_MX6QP) || is_cpu_type(MXC_CPU_MX6DP))
+		if (is_mx6dq() || is_mx6dqp())
 			return 1200000000;
 	/* Valid for IMX6SX/IMX6SDL/IMX6DQ */
 	case OCOTP_CFG3_SPEED_1GHZ:
 		return 996000000;
 	/* Valid for IMX6DQ */
 	case OCOTP_CFG3_SPEED_850MHZ:
-		if (is_cpu_type(MXC_CPU_MX6Q) || is_cpu_type(MXC_CPU_MX6D) ||
-			is_cpu_type(MXC_CPU_MX6QP) || is_cpu_type(MXC_CPU_MX6DP))
+		if (is_mx6dq() || is_mx6dqp())
 			return 852000000;
 	/* Valid for IMX6SX/IMX6SDL/IMX6DQ */
 	case OCOTP_CFG3_SPEED_800MHZ:
@@ -209,12 +207,38 @@ u32 __weak get_board_rev(void)
 	if (type == MXC_CPU_MX6D)
 		cpurev = (MXC_CPU_MX6Q) << 12 | (cpurev & 0xFFF);
 
-	if (type == MXC_CPU_MX6QP || type == MXC_CPU_MX6DP)
-		cpurev = (MXC_CPU_MX6Q) << 12 | ((cpurev + 0x10) & 0xFFF);
-
 	return cpurev;
 }
 #endif
+
+#ifdef CONFIG_IMX_TRUSTY_OS
+#ifdef CONFIG_MX6UL
+void smp_set_core_boot_addr(unsigned long addr, int corenr)
+{
+           return;
+}
+
+void smp_waitloop(unsigned previous_address)
+{
+           return;
+}
+#endif
+#endif
+
+static void init_csu(void)
+{
+#ifdef CONFIG_ARMV7_NONSEC
+	int i;
+	u32 csu = CSU_BASE_ADDR;
+	/*
+	 * This is to allow device can be accessed in non-secure world.
+	 * All imx6 chips CSU have 40 Config security level registers.
+	 */
+	for (i = 0; i < 40; i ++) {
+	    *((u32 *)csu + i) = 0xffffffff;
+	}
+#endif
+}
 
 static void clear_ldo_ramp(void)
 {
@@ -244,7 +268,7 @@ static int set_ldo_voltage(enum ldo_reg ldo, u32 mv)
 	u8 shift;
 
 	/* No LDO_SOC/PU/ARM */
-	if (is_cpu_type(MXC_CPU_MX6SLL))
+	if (is_mx6sll())
 		return 0;
 
 	if (mv < 725)
@@ -306,9 +330,7 @@ static void clear_mmdc_ch_mask(void)
 	reg = readl(&mxc_ccm->ccdr);
 
 	/* Clear MMDC channel mask */
-	if (is_cpu_type(MXC_CPU_MX6SX) || is_cpu_type(MXC_CPU_MX6UL) ||
-	    is_cpu_type(MXC_CPU_MX6SL) || is_cpu_type(MXC_CPU_MX6ULL) ||
-	    is_cpu_type(MXC_CPU_MX6SLL))
+	if (is_mx6sx() || is_mx6ul() || is_mx6ull() || is_mx6sl() || is_mx6sll())
 		reg &= ~(MXC_CCM_CCDR_MMDC_CH1_HS_MASK);
 	else
 		reg &= ~(MXC_CCM_CCDR_MMDC_CH1_HS_MASK | MXC_CCM_CCDR_MMDC_CH0_HS_MASK);
@@ -349,7 +371,7 @@ static void init_bandgap(void)
 	 *	101 - set REFTOP_VBGADJ[2:0] to 3b'101,
 	 *	111 - set REFTOP_VBGADJ[2:0] to 3b'111,
 	 */
-	if (is_cpu_type(MXC_CPU_MX6ULL)) {
+	if (is_mx6ull()) {
 		val = readl(&fuse->mem0);
 		val >>= OCOTP_MEM0_REFTOP_TRIM_SHIFT;
 		val &= 0x7;
@@ -480,9 +502,9 @@ static void imx_set_pcie_phy_power_down(void)
 
 int arch_cpu_init(void)
 {
-	if (!is_cpu_type(MXC_CPU_MX6SL) && !is_cpu_type(MXC_CPU_MX6SX)
-	    && !is_cpu_type(MXC_CPU_MX6UL) && !is_cpu_type(MXC_CPU_MX6ULL)
-	    && !is_cpu_type(MXC_CPU_MX6SLL)) {
+	if (!is_mx6sl() && !is_mx6sx()
+		&& !is_mx6ul() && !is_mx6ull() 
+		&& !is_mx6sll()) {
 		/*
 		 * imx6sl doesn't have pcie at all.
 		 * this bit is not used by imx6sx anymore
@@ -505,6 +527,8 @@ int arch_cpu_init(void)
 
 	init_aips();
 
+	init_csu();
+
 	/* Need to clear MMDC_CHx_MASK to make warm reset work. */
 	clear_mmdc_ch_mask();
 
@@ -515,37 +539,43 @@ int arch_cpu_init(void)
 	 */
 	init_bandgap();
 
-	if (!is_cpu_type(MXC_CPU_MX6UL) && !is_cpu_type(MXC_CPU_MX6ULL)) {
+	if (!is_mx6ul() && !is_mx6ull()) {
 		/*
 		 * When low freq boot is enabled, ROM will not set AHB
 		 * freq, so we need to ensure AHB freq is 132MHz in such
 		 * scenario.
+		 *
+		 * To i.MX6UL, when power up, default ARM core and
+		 * AHB rate is 396M and 132M.
 		 */
 		if (mxc_get_clock(MXC_ARM_CLK) == 396000000)
 			set_ahb_rate(132000000);
 	}
 
-	if (is_cpu_type(MXC_CPU_MX6UL)) {
-		if (is_soc_rev(CHIP_REV_1_0)) {
+	if (is_mx6ul()) {
+		if (is_soc_rev(CHIP_REV_1_0) == 0) {
 			/*
-			 * According to the design team's requirement on i.MX6UL,
-			 * the PMIC_STBY_REQ PAD should be configured as open
-			 * drain 100K (0x0000b8a0).
+			 * According to the design team's requirement on
+			 * i.MX6UL,the PMIC_STBY_REQ PAD should be configured
+			 * as open drain 100K (0x0000b8a0).
+			 * Only exists on TO1.0
 			 */
 			writel(0x0000b8a0, IOMUXC_BASE_ADDR + 0x29c);
 		} else {
 			/*
-			 * From TO1.1, SNVS adds internal pull up control for POR_B,
-			 * the register filed is GPBIT[1:0], after system boot up,
-			 * it can be set to 2b'01 to disable internal pull up.
-			 * It can save about 30uA power in SNVS mode.
+			 * From TO1.1, SNVS adds internal pull up control
+			 * for POR_B, the register filed is GPBIT[1:0],
+			 * after system boot up, it can be set to 2b'01
+			 * to disable internal pull up.It can save about
+			 * 30uA power in SNVS mode.
 			 */
-			writel((readl(MX6UL_SNVS_LP_BASE_ADDR + 0x10) & (~0x1400)) | 0x400,
-				MX6UL_SNVS_LP_BASE_ADDR + 0x10);
+			writel((readl(MX6UL_SNVS_LP_BASE_ADDR + 0x10) &
+			       (~0x1400)) | 0x400,
+			       MX6UL_SNVS_LP_BASE_ADDR + 0x10);
 		}
 	}
 
-	if (is_cpu_type(MXC_CPU_MX6ULL)) {
+	if (is_mx6ull()) {
 		/*
 		 * GPBIT[1:0] is suggested to set to 2'b11:
 		 * 2'b00 : always PUP100K
@@ -559,22 +589,22 @@ int arch_cpu_init(void)
 			0x3, MX6UL_SNVS_LP_BASE_ADDR);
 	}
 
-		/* Set perclk to source from OSC 24MHz */
+	/* Set perclk to source from OSC 24MHz */
 #if defined(CONFIG_MX6SL)
 	set_preclk_from_osc();
 #endif
 
-	if (is_cpu_type(MXC_CPU_MX6SX))
+	if (is_mx6sx())
 		set_uart_from_osc();
 
 	imx_set_wdog_powerdown(false); /* Disable PDE bit of WMCR register */
 
-	if (!is_cpu_type(MXC_CPU_MX6SL) && !is_cpu_type(MXC_CPU_MX6UL) &&
-	    !is_cpu_type(MXC_CPU_MX6ULL) && !is_cpu_type(MXC_CPU_MX6SLL))
+	if (!is_mx6sl() && !is_mx6ul() &&
+		!is_mx6ull() && !is_mx6sll())
 		imx_set_pcie_phy_power_down();
 
-	if (!is_mx6dqp() && !is_cpu_type(MXC_CPU_MX6UL) &&
-	    !is_cpu_type(MXC_CPU_MX6ULL) && !is_cpu_type(MXC_CPU_MX6SLL))
+	if (!is_mx6dqp() && !is_mx6ul() &&
+		!is_mx6ull() && !is_mx6sll())
 		imx_set_vddpu_power_down();
 
 #ifdef CONFIG_APBH_DMA
@@ -654,7 +684,7 @@ uint mmc_get_env_part(struct mmc *mmc)
 int board_postclk_init(void)
 {
 	/* NO LDO SOC on i.MX6SLL */
-	if (is_cpu_type(MXC_CPU_MX6SLL))
+	if (is_mx6sll())
 		return 0;
 
 	set_ldo_voltage(LDO_SOC, 1175);	/* Set VDDSOC to 1.175V */
@@ -683,8 +713,7 @@ void imx_get_mac_from_fuse(int dev_id, unsigned char *mac)
 	struct fuse_bank4_regs *fuse =
 			(struct fuse_bank4_regs *)bank->fuse_regs;
 
-	if ((is_cpu_type(MXC_CPU_MX6SX) || is_cpu_type(MXC_CPU_MX6UL) ||
-	    is_cpu_type(MXC_CPU_MX6ULL)) && dev_id == 1) {
+	if ((is_mx6sx() || is_mx6ul() || is_mx6ull()) && dev_id == 1) {
 		u32 value = readl(&fuse->mac_addr2);
 		mac[0] = value >> 24 ;
 		mac[1] = value >> 16 ;
@@ -706,7 +735,6 @@ void imx_get_mac_from_fuse(int dev_id, unsigned char *mac)
 		mac[4] = value >> 8 ;
 		mac[5] = value ;
 	}
-
 }
 #endif
 
@@ -813,8 +841,11 @@ void s_init(void)
 	u32 mask528;
 	u32 reg, periph1, periph2;
 
-	if (is_cpu_type(MXC_CPU_MX6SX) || is_cpu_type(MXC_CPU_MX6UL) ||
-	    is_cpu_type(MXC_CPU_MX6ULL) || is_cpu_type(MXC_CPU_MX6SLL))
+#if defined(CONFIG_ANDROID_SUPPORT)
+        /* Enable RTC */
+        writel(0x21, 0x020cc038);
+#endif
+	if (is_mx6sx() || is_mx6ul() || is_mx6ull() || is_mx6sll())
 		return;
 
 	/* Due to hardware limitation, on MX6Q we need to gate/ungate all PFDs
@@ -890,11 +921,12 @@ void imx_setup_hdmi(void)
 		 << MXC_CCM_CHSCCDR_IPU1_DI0_PRE_CLK_SEL_OFFSET);
 	writel(reg, &mxc_ccm->chsccdr);
 
-	/* Workaround to clear the overflow condition */
+	/* Clear the overflow condition */
 	if (readb(&hdmi->ih_fc_stat2) & HDMI_IH_FC_STAT2_OVERFLOW_MASK) {
 		/* TMDS software reset */
 		writeb((u8)~HDMI_MC_SWRSTZ_TMDSSWRST_REQ, &hdmi->mc_swrstz);
 		val = readb(&hdmi->fc_invidconf);
+		/* Need minimum 3 times to write to clear the register */
 		for (count = 0 ; count < 5 ; count++)
 			writeb(val, &hdmi->fc_invidconf);
 	}
@@ -902,7 +934,7 @@ void imx_setup_hdmi(void)
 #endif
 
 #ifdef CONFIG_IMX_BOOTAUX
-int arch_auxiliary_core_up(u32 core_id, u32 boot_private_data)
+int arch_auxiliary_core_up(u32 core_id, ulong boot_private_data)
 {
 	struct src *src_reg;
 	u32 stack, pc;
@@ -1025,7 +1057,7 @@ void prep_anatop_bypass(void)
 	if (!arm_orig_podf)
 		set_arm_freq_400M(true);
 
-	if (!is_cpu_type(MXC_CPU_MX6DL) && !is_cpu_type(MXC_CPU_MX6SX))
+	if (!is_mx6dl() && !is_mx6sx())
 		set_ldo_voltage(LDO_ARM, 975);
 	else
 		set_ldo_voltage(LDO_ARM, 1150);
@@ -1057,56 +1089,4 @@ void finish_anatop_bypass(void)
 		set_arm_freq_400M(false);
 }
 #endif
-
-#ifdef CONFIG_FSL_FASTBOOT
-
-#ifdef CONFIG_ANDROID_RECOVERY
-#define ANDROID_RECOVERY_BOOT  (1 << 7)
-/* check if the recovery bit is set by kernel, it can be set by kernel
- * issue a command '# reboot recovery' */
-int recovery_check_and_clean_flag(void)
-{
-	int flag_set = 0;
-	u32 reg;
-	reg = readl(SNVS_BASE_ADDR + SNVS_LPGPR);
-
-	flag_set = !!(reg & ANDROID_RECOVERY_BOOT);
-    printf("check_and_clean: reg %x, flag_set %d\n", reg, flag_set);
-	/* clean it in case looping infinite here.... */
-	if (flag_set) {
-		reg &= ~ANDROID_RECOVERY_BOOT;
-		writel(reg, SNVS_BASE_ADDR + SNVS_LPGPR);
-	}
-
-	return flag_set;
-}
-#endif /*CONFIG_ANDROID_RECOVERY*/
-
-#define ANDROID_FASTBOOT_BOOT  (1 << 8)
-/* check if the recovery bit is set by kernel, it can be set by kernel
- * issue a command '# reboot fastboot' */
-int fastboot_check_and_clean_flag(void)
-{
-	int flag_set = 0;
-	u32 reg;
-
-	reg = readl(SNVS_BASE_ADDR + SNVS_LPGPR);
-
-	flag_set = !!(reg & ANDROID_FASTBOOT_BOOT);
-
-	/* clean it in case looping infinite here.... */
-	if (flag_set) {
-		reg &= ~ANDROID_FASTBOOT_BOOT;
-		writel(reg, SNVS_BASE_ADDR + SNVS_LPGPR);
-	}
-
-	return flag_set;
-}
-
-void fastboot_enable_flag(void)
-{
-	setbits_le32(SNVS_BASE_ADDR + SNVS_LPGPR,
-		ANDROID_FASTBOOT_BOOT);
-}
-#endif /*CONFIG_FSL_FASTBOOT*/
 

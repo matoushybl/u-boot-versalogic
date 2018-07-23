@@ -102,6 +102,7 @@ void rkvop_mode_set(struct rk3288_vop *regs,
 	u32 hfront_porch = edid->hfront_porch.typ;
 	u32 vfront_porch = edid->vfront_porch.typ;
 	uint flags;
+	int mode_flags;
 
 	switch (mode) {
 	case VOP_MODE_HDMI:
@@ -113,9 +114,20 @@ void rkvop_mode_set(struct rk3288_vop *regs,
 		clrsetbits_le32(&regs->sys_ctrl, M_ALL_OUT_EN,
 				V_EDP_OUT_EN(1));
 		break;
+	case VOP_MODE_LVDS:
+		clrsetbits_le32(&regs->sys_ctrl, M_ALL_OUT_EN,
+				V_RGB_OUT_EN(1));
+		break;
 	}
 
-	flags = V_DSP_OUT_MODE(15) |
+	if (mode == VOP_MODE_HDMI || mode == VOP_MODE_EDP)
+		/* RGBaaa */
+		mode_flags = 15;
+	else
+		/* RGB888 */
+		mode_flags = 0;
+
+	flags = V_DSP_OUT_MODE(mode_flags) |
 		V_DSP_HSYNC_POL(!!(edid->flags & DISPLAY_FLAGS_HSYNC_HIGH)) |
 		V_DSP_VSYNC_POL(!!(edid->flags & DISPLAY_FLAGS_VSYNC_HIGH));
 
@@ -183,7 +195,7 @@ int rk_display_init(struct udevice *dev, ulong fbbase,
 	struct udevice *disp;
 	int ret, remote, i, offset;
 	struct display_plat *disp_uc_plat;
-	struct udevice *clk;
+	struct clk clk;
 
 	vop_id = fdtdec_get_int(blob, ep_node, "reg", -1);
 	debug("vop_id=%d\n", vop_id);
@@ -209,6 +221,11 @@ int rk_display_init(struct udevice *dev, ulong fbbase,
 
 	disp_uc_plat = dev_get_uclass_platdata(disp);
 	debug("Found device '%s', disp_uc_priv=%p\n", disp->name, disp_uc_plat);
+	if (display_in_use(disp)) {
+		debug("   - device in use\n");
+		return -EBUSY;
+	}
+
 	disp_uc_plat->source_id = remote_vop_id;
 	disp_uc_plat->src_dev = dev;
 
@@ -225,11 +242,9 @@ int rk_display_init(struct udevice *dev, ulong fbbase,
 		return ret;
 	}
 
-	ret = rkclk_get_clk(CLK_NEW, &clk);
-	if (!ret) {
-		ret = clk_set_periph_rate(clk, DCLK_VOP0 + vop_id,
-					  timing.pixelclock.typ);
-	}
+	ret = clk_get_by_index(dev, 1, &clk);
+	if (!ret)
+		ret = clk_set_rate(&clk, timing.pixelclock.typ);
 	if (ret) {
 		debug("%s: Failed to set pixel clock: ret=%d\n", __func__, ret);
 		return ret;
@@ -301,8 +316,12 @@ static int rk_vop_probe(struct udevice *dev)
 	/*
 	 * Try all the ports until we find one that works. In practice this
 	 * tries EDP first if available, then HDMI.
+	 *
+	 * Note that rockchip_vop_set_clk() always uses NPLL as the source
+	 * clock so it is currently not possible to use more than one display
+	 * device simultaneously.
 	 */
-	port = fdt_subnode_offset(blob, dev->of_offset, "port");
+	port = fdt_subnode_offset(blob, dev_of_offset(dev), "port");
 	if (port < 0)
 		return -EINVAL;
 	for (node = fdt_first_subnode(blob, port);
@@ -314,6 +333,7 @@ static int rk_vop_probe(struct udevice *dev)
 		if (!ret)
 			break;
 	}
+	video_set_flush_dcache(dev, 1);
 
 	return ret;
 }

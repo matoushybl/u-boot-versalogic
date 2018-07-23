@@ -1,5 +1,6 @@
 /*
  * Copyright 2015-2016 Freescale Semiconductor, Inc.
+ * Copyright 2017 NXP
  *
  * SPDX-License-Identifier:     GPL-2.0+
  */
@@ -8,6 +9,35 @@
 #include <asm/armv7.h>
 #include <asm/pl310.h>
 #include <asm/io.h>
+#include <asm/imx-common/sys_proto.h>
+
+static void enable_ca7_smp(void)
+{
+	uint32_t val;
+
+	/* Read MIDR */
+	asm volatile ("mrc p15, 0, %0, c0, c0, 0\n\t" : "=r"(val));
+	val = (val >> 4);
+	val &= 0xf;
+
+	/* Only set the SMP for Cortex A7 */
+	if (val == 0x7) {
+		/* Read auxiliary control register */
+		asm volatile ("mrc p15, 0, %0, c1, c0, 1\n\t" : "=r"(val));
+
+		if (val & (1 << 6))
+			return;
+
+		/* Enable SMP */
+		val |= (1 << 6);
+
+		/* Write auxiliary control register */
+		asm volatile ("mcr p15, 0, %0, c1, c0, 1\n\t" : : "r"(val));
+
+		DSB;
+		ISB;
+	}
+}
 
 #ifndef CONFIG_SYS_DCACHE_OFF
 void enable_caches(void)
@@ -20,6 +50,9 @@ void enable_caches(void)
 	/* Avoid random hang when download by usb */
 	invalidate_dcache_all();
 
+	/* Set ACTLR.SMP bit for Cortex-A7 */
+	enable_ca7_smp();
+
 	/* Enable D-cache. I-cache is already enabled in start.S */
 	dcache_enable();
 
@@ -31,6 +64,14 @@ void enable_caches(void)
 					IRAM_SIZE,
 					option);
 }
+#else
+void enable_caches(void)
+{
+	/* Set ACTLR.SMP bit for Cortex-A7, even the caches are disabled by u-boot */
+	enable_ca7_smp();
+	
+	puts("WARNING: Caches not enabled\n");
+}
 #endif
 
 #ifndef CONFIG_SYS_L2CACHE_OFF
@@ -39,6 +80,7 @@ void enable_caches(void)
 void v7_outer_cache_enable(void)
 {
 	struct pl310_regs *const pl310 = (struct pl310_regs *)L2_PL310_BASE;
+	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
 	unsigned int val, cache_id;
 
 
@@ -55,15 +97,14 @@ void v7_outer_cache_enable(void)
 	 */
 	setbits_le32(&pl310->pl310_aux_ctrl, L310_SHARED_ATT_OVERRIDE_ENABLE);
 
-#if defined(CONFIG_MX6SL) || defined(CONFIG_MX6SLL)
-	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
-	val = readl(&iomux->gpr[11]);
-	if (val & IOMUXC_GPR11_L2CACHE_AS_OCRAM) {
-		/* L2 cache configured as OCRAM, reset it */
-		val &= ~IOMUXC_GPR11_L2CACHE_AS_OCRAM;
-		writel(val, &iomux->gpr[11]);
+	if (is_mx6sl() || is_mx6sll()) {
+		val = readl(&iomux->gpr[11]);
+		if (val & IOMUXC_GPR11_L2CACHE_AS_OCRAM) {
+			/* L2 cache configured as OCRAM, reset it */
+			val &= ~IOMUXC_GPR11_L2CACHE_AS_OCRAM;
+			writel(val, &iomux->gpr[11]);
+		}
 	}
-#endif
 
 	writel(0x132, &pl310->pl310_tag_latency_ctrl);
 	writel(0x132, &pl310->pl310_data_latency_ctrl);

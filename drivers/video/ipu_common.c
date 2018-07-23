@@ -16,7 +16,7 @@
 #include <linux/types.h>
 #include <linux/err.h>
 #include <asm/io.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/crm_regs.h>
 #include <div64.h>
@@ -339,7 +339,7 @@ static void ipu_pixel_clk_recalc(struct clk *clk)
 
 	div = __raw_readl(DI_BS_CLKGEN0(clk->id));
 	debug("read BS_CLKGEN0 div:%d, final_rate:%lld, prate:%ld\n",
-			div, final_rate, clk->parent->rate);
+	      div, final_rate, clk->parent->rate);
 
 	clk->rate = 0;
 	if (div != 0) {
@@ -363,7 +363,7 @@ static unsigned long ipu_pixel_clk_round_rate(struct clk *clk,
 	div = parent_rate;
 	remainder = do_div(div, rate);
 	/* Round the divider value */
-	if (remainder > (rate/2))
+	if (remainder > (rate / 2))
 		div++;
 	if (div < 0x10)            /* Min DI disp clock divider is 1 */
 		div = 0x10;
@@ -391,7 +391,7 @@ static int ipu_pixel_clk_set_rate(struct clk *clk, unsigned long rate)
 	div = parent_rate;
 	remainder = do_div(div, rate);
 	/* Round the divider value */
-	if (remainder > (rate/2))
+	if (remainder > (rate / 2))
 		div++;
 
 	/* Round up divider if it gets us closer to desired pix clk */
@@ -404,9 +404,15 @@ static int ipu_pixel_clk_set_rate(struct clk *clk, unsigned long rate)
 
 	__raw_writel(div, DI_BS_CLKGEN0(clk->id));
 
-	/* Setup pixel clock timing */
-	/* Down time is half of period */
+	/*
+	 * Setup pixel clock timing
+	 * Down time is half of period
+	 */
 	__raw_writel((div / 16) << 16, DI_BS_CLKGEN1(clk->id));
+
+	do_div(parent_rate, div);
+
+	clk->rate = parent_rate;
 
 	return 0;
 }

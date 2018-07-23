@@ -12,12 +12,6 @@
 #include <linux/kconfig.h>
 /* SPL */
 /* #if defined(CONFIG_SPL_BUILD) */
-
-#define CONFIG_SPL_MMC_SUPPORT
-#define CONFIG_SPL_SPI_SUPPORT
-#define CONFIG_SPL_FAT_SUPPORT
-#define CONFIG_SPL_EXT_SUPPORT
-
 /* common IMX6 SPL configuration */
 #include "imx6_spl.h"
 
@@ -38,27 +32,21 @@
 #define PHYS_SDRAM_SIZE			(1024u * SZ_1M)
 #endif
 
-#define CONFIG_BOARD_EARLY_INIT_F
-#define CONFIG_BOARD_LATE_INIT
-
 #define CONFIG_MXC_UART
 
 /* SPI */
-#define CONFIG_CMD_SPI
 #define CONFIG_MXC_SPI
 
 /* SPI Flash */
 
 #define TQMA6_SPI_FLASH_SECTOR_SIZE	SZ_64K
 
-#define CONFIG_CMD_SF
 #define CONFIG_SF_DEFAULT_BUS	0
 #define CONFIG_SF_DEFAULT_CS	0
 #define CONFIG_SF_DEFAULT_SPEED	50000000
 #define CONFIG_SF_DEFAULT_MODE	(SPI_MODE_0)
 
 /* I2C Configs */
-#define CONFIG_CMD_I2C
 #define CONFIG_SYS_I2C
 #define CONFIG_SYS_I2C_MXC
 #define CONFIG_SYS_I2C_MXC_I2C1		/* enable I2C bus 1 */
@@ -91,19 +79,13 @@
 #define CONFIG_SYS_FSL_ESDHC_ADDR	0
 
 /* USB Configs */
-#define CONFIG_CMD_USB
 #define CONFIG_USB_EHCI
 #define CONFIG_USB_EHCI_MX6
-#define CONFIG_USB_STORAGE
 #define CONFIG_USB_HOST_ETHER
 #define CONFIG_USB_ETHER_SMSC95XX
 #define CONFIG_MXC_USB_PORTSC	(PORT_PTS_UTMI | PORT_PTS_PTW)
 #define CONFIG_USB_MAX_CONTROLLER_COUNT	2
 #define CONFIG_EHCI_HCD_INIT_AFTER_RESET	/* For OTG port */
-
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_DHCP
-#define CONFIG_CMD_MII
 
 #define CONFIG_FEC_MXC
 #define IMX_FEC_BASE			ENET_BASE_ADDR
@@ -111,10 +93,6 @@
 #define CONFIG_MII
 
 #define CONFIG_ARP_TIMEOUT		200UL
-/* Network config - Allow larger/faster download for TFTP/NFS */
-#define CONFIG_IP_DEFRAG
-#define CONFIG_TFTP_BLOCKSIZE	4096
-#define CONFIG_NFS_READ_SIZE	4096
 
 /* Command definition */
 #define CONFIG_CMD_BMODE
@@ -155,8 +133,8 @@
 	"update_uboot=if tftp ${uboot}; then "                                 \
 		"if itest ${filesize} > 0; then "                              \
 			"mmc dev ${mmcdev}; mmc rescan; "                      \
-			"setexpr blkc ${filesize} / 0x200; "                   \
-			"setexpr blkc ${blkc} + 1; "                           \
+			"setexpr blkc ${filesize} + 0x1ff; "                   \
+			"setexpr blkc ${blkc} / 0x200; "                       \
 			"if itest ${blkc} <= ${uboot_size}; then "             \
 				"mmc write ${loadaddr} ${uboot_start} "        \
 					"${blkc}; "                            \
@@ -167,8 +145,8 @@
 		"if tftp ${kernel}; then "                                     \
 			"if itest ${filesize} > 0; then "                      \
 				"mmc dev ${mmcdev}; mmc rescan; "              \
-				"setexpr blkc ${filesize} / 0x200; "           \
-				"setexpr blkc ${blkc} + 1; "                   \
+				"setexpr blkc ${filesize} + 0x1ff; "           \
+				"setexpr blkc ${blkc} / 0x200; "               \
 				"if itest ${blkc} <= ${kernel_size}; then "    \
 					"mmc write ${loadaddr} "               \
 						"${kernel_start} ${blkc}; "    \
@@ -179,8 +157,8 @@
 	"update_fdt=if tftp ${fdt_file}; then "                                \
 		"if itest ${filesize} > 0; then "                              \
 			"mmc dev ${mmcdev}; mmc rescan; "                      \
-			"setexpr blkc ${filesize} / 0x200; "                   \
-			"setexpr blkc ${blkc} + 1; "                           \
+			"setexpr blkc ${filesize} + 0x1ff; "                   \
+			"setexpr blkc ${blkc} / 0x200; "                       \
 			"if itest ${blkc} <= ${fdt_size}; then "               \
 				"mmc write ${loadaddr} ${fdt_start} ${blkc}; " \
 			"fi; "                                                 \
@@ -284,9 +262,8 @@
 			__stringify(TQMA6_SPI_FLASH_SECTOR_SIZE)"; "           \
 		"setexpr offset ${fdt_start} * "                               \
 			__stringify(TQMA6_SPI_FLASH_SECTOR_SIZE)"; "           \
-		"sf read ${${fdt_addr}} ${offset} ${size}; "                   \
+		"sf read ${fdt_addr} ${offset} ${size}; "                      \
 		"setenv size ; setenv offset\0"                                \
-
 
 #define CONFIG_BOOTCOMMAND                                                     \
 	"sf probe; run mmcboot; run netboot; run panicboot"                    \
@@ -300,6 +277,9 @@
 /* 128 MiB offset as in ARM related docu for linux suggested */
 #define TQMA6_FDT_ADDRESS		0x18000000
 
+/* set to a resonable value, changeable by user */
+#define TQMA6_CMA_SIZE                 160M
+
 #define CONFIG_EXTRA_ENV_SETTINGS                                              \
 	"board=tqma6\0"                                                        \
 	"uimage=uImage\0"                                                      \
@@ -311,17 +291,21 @@
 	"uboot=u-boot.imx\0"                                                   \
 	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0"                               \
 	"fdt_addr="__stringify(TQMA6_FDT_ADDRESS)"\0"                          \
-	"console=" CONFIG_CONSOLE_DEV "\0"                                     \
+	"console=" CONSOLE_DEV "\0"                                            \
+	"cma_size="__stringify(TQMA6_CMA_SIZE)"\0"                             \
 	"fdt_high=0xffffffff\0"                                                \
 	"initrd_high=0xffffffff\0"                                             \
+	"rootfsmode=ro\0"                                                      \
+	"addcma=setenv bootargs ${bootargs} cma=${cma_size}\0"                 \
 	"addtty=setenv bootargs ${bootargs} console=${console},${baudrate}\0"  \
 	"addfb=setenv bootargs ${bootargs} "                                   \
 		"imx-fbdev.legacyfb_depth=32 consoleblank=0\0"                 \
 	"mmcpart=2\0"                                                          \
 	"mmcblkdev=0\0"                                                        \
-	"mmcargs=run addmmc addtty addfb\0"                                    \
+	"mmcargs=run addmmc addtty addfb addcma\0"                             \
 	"addmmc=setenv bootargs ${bootargs} "                                  \
-		"root=/dev/mmcblk${mmcblkdev}p${mmcpart} rw rootwait\0"        \
+		"root=/dev/mmcblk${mmcblkdev}p${mmcpart} ${rootfsmode} "       \
+		"rootwait\0"                                                   \
 	"mmcboot=echo Booting from mmc ...; "                                  \
 		"setenv bootargs; "                                            \
 		"run mmcargs; "                                                \
@@ -336,7 +320,7 @@
 	"netdev=eth0\0"                                                        \
 	"rootpath=/srv/nfs/tqma6\0"                                            \
 	"ipmode=static\0"                                                      \
-	"netargs=run addnfs addip addtty addfb\0"                              \
+	"netargs=run addnfs addip addtty addfb addcma\0"                       \
 	"addnfs=setenv bootargs ${bootargs} "                                  \
 		"root=/dev/nfs rw "                                            \
 		"nfsroot=${serverip}:${rootpath},v3,tcp;\0"                    \
@@ -377,11 +361,6 @@
 	(CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
 #define CONFIG_SYS_INIT_SP_ADDR \
 	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
-
-#define CONFIG_OF_LIBFDT
-#define CONFIG_OF_BOARD_SETUP
-#define CONFIG_FIT
-#define CONFIG_FIT_VERBOSE
 
 /*
  * All the defines above are for the TQMa6 SoM

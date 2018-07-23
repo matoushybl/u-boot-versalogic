@@ -38,19 +38,10 @@
 #define CONFIG_BOOTP_HOSTNAME
 
 /* Command line configuration */
-#define CONFIG_CMD_CACHE
 #undef CONFIG_CMD_DATE
-#define CONFIG_CMD_DHCP
-#undef CONFIG_CMD_I2C
 #undef CONFIG_CMD_JFFS2
-#undef CONFIG_CMD_UBI
-#define CONFIG_CMD_MII
 #undef CONFIG_CMD_NAND
-#define CONFIG_CMD_PING
 #define CONFIG_CMD_REGINFO
-#define CONFIG_CMD_SPI
-#define CONFIG_CMD_SF
-
 
 /*
  * NAND FLASH
@@ -83,7 +74,6 @@
 #define CONFIG_SYS_FEC0_PHYADDR	0
 #define CONFIG_SYS_FEC1_PHYADDR	1
 
-#define CONFIG_BOOTDELAY		2	/* autoboot after 5 seconds */
 
 #ifdef	CONFIG_SYS_NAND_BOOT
 #define CONFIG_BOOTARGS	"root=/dev/mtdblock2 rw rootfstype=jffs2 " \
@@ -210,10 +200,6 @@
 
 #define CONFIG_PRAM			2048	/* 2048 KB */
 
-/* HUSH */
-#define CONFIG_SYS_HUSH_PARSER		1
-#define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
-
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
 
 #if defined(CONFIG_CMD_KGDB)
@@ -291,14 +277,12 @@
  * Environment is embedded in u-boot in the second sector of the flash
  */
 #if !defined(CONFIG_SERIAL_BOOT)  /*MRAM boot*/
-#define CONFIG_SYS_NO_FLASH
 #define CONFIG_ENV_IS_IN_MRAM	1
 #define CONFIG_ENV_ADDR		(0x40000 - 0x1000) /*MRAM size 40000*/
 #define CONFIG_ENV_SIZE		0x1000
 #endif
 
 #if defined(CONFIG_CF_SBF)
-#define CONFIG_SYS_NO_FLASH
 #define CONFIG_ENV_IS_IN_SPI_FLASH	1
 #define CONFIG_ENV_SPI_CS		1
 #define CONFIG_ENV_OFFSET		0x40000
@@ -306,7 +290,6 @@
 #define CONFIG_ENV_SECT_SIZE		0x10000
 #endif
 #if defined(CONFIG_SYS_NAND_BOOT)
-#define CONFIG_SYS_NO_FLASH
 #define CONFIG_ENV_IS_NOWHERE
 #define CONFIG_ENV_OFFSET	0x80000
 #define CONFIG_ENV_SIZE	0x20000

@@ -7,8 +7,6 @@
 #ifndef __CONFIG_TQMA6_WRU4_H
 #define __CONFIG_TQMA6_WRU4_H
 
-#define CONFIG_DEFAULT_FDT_FILE		"imx6s-wru4.dtb"
-
 /* DTT sensors */
 #define CONFIG_DTT_SENSORS		{ 0, 1 }
 #define CONFIG_SYS_DTT_BUS_NUM		2
@@ -21,7 +19,7 @@
 
 /* UART */
 #define CONFIG_MXC_UART_BASE		UART4_BASE
-#define CONFIG_CONSOLE_DEV		"ttymxc3"
+#define CONSOLE_DEV		"ttymxc3"
 
 #define CONFIG_MISC_INIT_R
 
@@ -38,29 +36,7 @@
 #define CONFIG_SYS_RTC_DS1337_NOOSC
 #define CONFIG_CMD_DATE
 
-
 /* LED */
-#define CONFIG_CMD_LED
-#define CONFIG_STATUS_LED
-#define CONFIG_BOARD_SPECIFIC_LED
-#define STATUS_LED_BIT			0
-#define STATUS_LED_STATE		STATUS_LED_ON
-#define STATUS_LED_PERIOD		(CONFIG_SYS_HZ / 2)
-#define STATUS_LED_BIT1			1
-#define STATUS_LED_STATE1		STATUS_LED_ON
-#define STATUS_LED_PERIOD1		(CONFIG_SYS_HZ / 2)
-#define STATUS_LED_BIT2			2
-#define STATUS_LED_STATE2		STATUS_LED_ON
-#define STATUS_LED_PERIOD2		(CONFIG_SYS_HZ / 2)
-#define STATUS_LED_BIT3			3
-#define STATUS_LED_STATE3		STATUS_LED_ON
-#define STATUS_LED_PERIOD3		(CONFIG_SYS_HZ / 2)
-#define STATUS_LED_BIT4			4
-#define STATUS_LED_STATE4		STATUS_LED_ON
-#define STATUS_LED_PERIOD4		(CONFIG_SYS_HZ / 2)
-#define STATUS_LED_BIT5			5
-#define STATUS_LED_STATE5		STATUS_LED_ON
-#define STATUS_LED_PERIOD5		(CONFIG_SYS_HZ / 2)
 
 /* Bootcounter */
 #define CONFIG_BOOTCOUNT_LIMIT
@@ -71,8 +47,6 @@
  * Remove all unused interfaces / commands that are defined in
  * the common header tqms6.h
  */
-#undef CONFIG_CMD_SF
-#undef CONFIG_CMD_SPI
 #undef CONFIG_MXC_SPI
 
 #endif /* __CONFIG_TQMA6_WRU4_H */

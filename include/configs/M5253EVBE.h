@@ -18,7 +18,6 @@
 
 #undef CONFIG_WATCHDOG		/* disable watchdog */
 
-#define CONFIG_BOOTDELAY	5
 
 /* Configuration for environment
  * Environment is embedded in u-boot in the second sector of the flash
@@ -37,7 +36,6 @@
 	. = DEFINED(env_offset) ? env_offset : .; \
 	common/env_embedded.o      (.text)
 
-
 /*
  * BOOTP options
  */
@@ -49,14 +47,9 @@
 /*
  * Command line configuration.
  */
-#define CONFIG_CMD_CACHE
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_FAT
 #define CONFIG_CMD_IDE
 
 /* ATA */
-#define CONFIG_DOS_PARTITION
-#define CONFIG_MAC_PARTITION
 #define CONFIG_IDE_RESET	1
 #define CONFIG_IDE_PREINIT	1
 #define CONFIG_ATAPI

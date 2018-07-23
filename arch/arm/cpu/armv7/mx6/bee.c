@@ -6,7 +6,7 @@
 
 #include <asm/io.h>
 #include <asm/arch/mx6_bee.h>
-#include <asm-generic/errno.h>
+#include <linux/errno.h>
 #include <asm/system.h>
 #include <common.h>
 #include <command.h>

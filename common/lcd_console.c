@@ -46,9 +46,11 @@ static void lcd_putc_xy0(struct console_t *pcons, ushort x, ushort y, char c)
 {
 	int fg_color = lcd_getfgcolor();
 	int bg_color = lcd_getbgcolor();
-	int i, row;
+	int row;
 #if LCD_BPP == LCD_MONOCHROME
 	ushort off  = x * (1 << LCD_BPP) % 8;
+#else
+	int i;
 #endif
 
 	fbptr_t *dst = (fbptr_t *)pcons->fbbase +

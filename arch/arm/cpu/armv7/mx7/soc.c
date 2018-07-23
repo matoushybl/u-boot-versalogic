@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015-2016 Freescale Semiconductor, Inc.
+ * Copyright 2017 NXP
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
@@ -17,11 +18,10 @@
 #include <asm/arch/crm_regs.h>
 #include <dm.h>
 #include <imx_thermal.h>
-#include <mxsfb.h>
+#include <fsl_wdog.h>
 #if defined(CONFIG_FSL_FASTBOOT) && defined(CONFIG_ANDROID_RECOVERY)
 #include <recovery.h>
 #endif
-
 
 #if defined(CONFIG_IMX_THERMAL)
 static const struct imx_thermal_plat imx7_thermal_plat = {
@@ -170,12 +170,30 @@ u32 get_cpu_temp_grade(int *minc, int *maxc)
 	return val;
 }
 
+static bool is_mx7d(void)
+{
+	struct ocotp_regs *ocotp = (struct ocotp_regs *)OCOTP_BASE_ADDR;
+	struct fuse_bank *bank = &ocotp->bank[1];
+	struct fuse_bank1_regs *fuse =
+		(struct fuse_bank1_regs *)bank->fuse_regs;
+	int val;
+
+	val = readl(&fuse->tester4);
+	if (val & 1)
+		return false;
+	else
+		return true;
+}
+
 u32 get_cpu_rev(void)
 {
 	struct mxc_ccm_anatop_reg *ccm_anatop = (struct mxc_ccm_anatop_reg *)
 						 ANATOP_BASE_ADDR;
 	u32 reg = readl(&ccm_anatop->digprog);
 	u32 type = (reg >> 16) & 0xff;
+
+	if (!is_mx7d())
+		type = MXC_CPU_MX7S;
 
 	reg &= 0xff;
 	return (type << 12) | reg;
@@ -267,6 +285,20 @@ int arch_cpu_init(void)
 	return 0;
 }
 
+#ifdef CONFIG_ARCH_MISC_INIT
+int arch_misc_init(void)
+{
+#ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
+	if (is_mx7d())
+		setenv("soc", "imx7d");
+	else
+		setenv("soc", "imx7s");
+#endif
+
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_SERIAL_TAG
 void get_board_serial(struct tag_serialnr *serialnr)
 {
@@ -313,7 +345,7 @@ void imx_get_mac_from_fuse(int dev_id, unsigned char *mac)
 #endif
 
 #ifdef CONFIG_IMX_BOOTAUX
-int arch_auxiliary_core_up(u32 core_id, u32 boot_private_data)
+int arch_auxiliary_core_up(u32 core_id, ulong boot_private_data)
 {
 	u32 stack, pc;
 	struct src *src_reg = (struct src *)SRC_BASE_ADDR;
@@ -448,16 +480,13 @@ int mmc_get_env_dev(void)
 
 void s_init(void)
 {
-#if !defined CONFIG_SPL_BUILD
-	/* Enable SMP mode for CPU0, by setting bit 6 of Auxiliary Ctl reg */
-	asm volatile(
-			"mrc p15, 0, r0, c1, c0, 1\n"
-			"orr r0, r0, #1 << 6\n"
-			"mcr p15, 0, r0, c1, c0, 1\n");
-#endif
 	/* clock configuration. */
 	clock_init();
 
+#if defined(CONFIG_ANDROID_SUPPORT)
+        /* Enable RTC */
+        writel(0x21, 0x30370038);
+#endif
 	return;
 }
 
@@ -468,58 +497,31 @@ void reset_misc(void)
 #endif
 }
 
-#ifdef CONFIG_FSL_FASTBOOT
-#ifdef CONFIG_ANDROID_RECOVERY
-#define ANDROID_RECOVERY_BOOT	(1 << 7)
-/*
- * check if the recovery bit is set by kernel, it can be set by kernel
- * issue a command '# reboot recovery'
- */
-int recovery_check_and_clean_flag(void)
+#ifdef CONFIG_IMX_TRUSTY_OS
+#ifdef CONFIG_MX7D
+void smp_set_core_boot_addr(unsigned long addr, int corenr)
 {
-	int flag_set = 0;
-	u32 reg;
-	reg = readl(SNVS_BASE_ADDR + SNVS_LPGPR);
+            return;
+}
 
-	flag_set = !!(reg & ANDROID_RECOVERY_BOOT);
-	printf("check_and_clean: reg %x, flag_set %d\n", reg, flag_set);
-	/* clean it in case looping infinite here.... */
-	if (flag_set) {
-		reg &= ~ANDROID_RECOVERY_BOOT;
-		writel(reg, SNVS_BASE_ADDR + SNVS_LPGPR);
+void smp_waitloop(unsigned previous_address)
+{
+            return;
+}
+#endif
+#endif
+
+void reset_cpu(ulong addr)
+{
+	struct watchdog_regs *wdog = (struct watchdog_regs *)WDOG1_BASE_ADDR;
+
+	/* Clear WDA to trigger WDOG_B immediately */
+	writew((WCR_WDE | WCR_SRS), &wdog->wcr);
+
+	while (1) {
+		/*
+		 * spin for .5 seconds before reset
+		 */
 	}
-
-	return flag_set;
 }
-#endif /*CONFIG_ANDROID_RECOVERY*/
-
-#define ANDROID_FASTBOOT_BOOT  (1 << 8)
-/*
- * check if the recovery bit is set by kernel, it can be set by kernel
- * issue a command '# reboot fastboot'
- */
-int fastboot_check_and_clean_flag(void)
-{
-	int flag_set = 0;
-	u32 reg;
-
-	reg = readl(SNVS_BASE_ADDR + SNVS_LPGPR);
-
-	flag_set = !!(reg & ANDROID_FASTBOOT_BOOT);
-
-	/* clean it in case looping infinite here.... */
-	if (flag_set) {
-		reg &= ~ANDROID_FASTBOOT_BOOT;
-		writel(reg, SNVS_BASE_ADDR + SNVS_LPGPR);
-	}
-
-	return flag_set;
-}
-
-void fastboot_enable_flag(void)
-{
-	setbits_le32(SNVS_BASE_ADDR + SNVS_LPGPR,
-		ANDROID_FASTBOOT_BOOT);
-}
-#endif /*CONFIG_FSL_FASTBOOT*/
 

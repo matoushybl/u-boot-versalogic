@@ -15,9 +15,6 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#define CONFIG_SYS_GENERIC_BOARD
-#define CONFIG_DISPLAY_BOARDINFO
-
 /*
  * High Level Configuration Options
  * (easy to change)
@@ -46,33 +43,23 @@
 #define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200, 230400 }
 
 /* Partitions */
-#define CONFIG_DOS_PARTITION
-#define CONFIG_MAC_PARTITION
-#define CONFIG_ISO_PARTITION
 
 /*
  * Supported commands
  */
 #define CONFIG_CMD_REGINFO
-#define CONFIG_CMD_PING
 #define CONFIG_CMD_DIAG
 #define CONFIG_CMD_IRQ
 
 /* USB support */
 #if USE_GRUSB
 #define CONFIG_USB_UHCI
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_USB
-#define CONFIG_USB_STORAGE
 /* Enable needed helper functions */
-#define CONFIG_SYS_STDIO_DEREGISTER	/* needs stdio_deregister */
 #endif
 
 /*
  * Autobooting
  */
-#define CONFIG_BOOTDELAY	5	/* autoboot after 5 seconds */
 
 #define CONFIG_PREBOOT	"echo;"	\
 	"echo Type \"run flash_nfs\" to mount root filesystem over NFS;" \
@@ -159,7 +146,6 @@
  *               0xFF000000 for 16 MB
  *               0xFF800000 for  8 MB
  */
-/*#define CONFIG_SYS_NO_FLASH		1*/
 #define CONFIG_SYS_FLASH_BASE		0x00000000
 #define CONFIG_SYS_FLASH_SIZE		0x00400000	/* FPGA Bit file is in top of FLASH, we only ues the bottom 4Mb */
 
@@ -312,9 +298,6 @@
 
 /* no DDR2 Controller */
 #undef CONFIG_SYS_GRLIB_GAISLER_DDR2SPA1
-
-/* Identification string */
-#define CONFIG_IDENT_STRING " Gaisler LEON3 EP2S60"
 
 /* default kernel command line */
 #define CONFIG_DEFAULT_KERNEL_COMMAND_LINE "console=ttyS0,38400\0\0"

@@ -14,13 +14,10 @@
 #include <configs/x86-common.h>
 
 #define CONFIG_SYS_MONITOR_LEN		(1 << 20)
-#define CONFIG_ARCH_EARLY_INIT_R
-
-#define CONFIG_PCI_PNP
 
 #define CONFIG_STD_DEVICES_SETTINGS	"stdin=serial,i8042-kbd\0" \
-					"stdout=serial,vga\0" \
-					"stderr=serial,vga\0"
+					"stdout=serial,vidconsole\0" \
+					"stderr=serial,vidconsole\0"
 
 /*
  * ATA/SATA support for QEMU x86 targets
@@ -43,7 +40,7 @@
 #define CONFIG_ATAPI
 
 #undef CONFIG_SCSI_AHCI
-#undef CONFIG_CMD_SCSI
+#undef CONFIG_SCSI
 #else
 #define CONFIG_SCSI_DEV_LIST		\
 	{PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_ICH9_AHCI}
@@ -55,5 +52,14 @@
 /* SPI is not supported */
 #undef CONFIG_ENV_IS_IN_SPI_FLASH
 #define CONFIG_ENV_IS_NOWHERE
+
+#define CONFIG_SPL_FRAMEWORK
+
+#define CONFIG_SPL_TEXT_BASE		0xfffd0000
+
+#define BOOT_DEVICE_SPI			10
+
+#define CONFIG_SPL_BOARD_LOAD_IMAGE
+#define BOOT_DEVICE_BOARD		11
 
 #endif	/* __CONFIG_H */

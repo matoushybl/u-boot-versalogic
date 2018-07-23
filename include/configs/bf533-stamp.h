@@ -7,7 +7,6 @@
 
 #include <asm/config-pre.h>
 
-
 /*
  * Processor Settings
  */
@@ -53,7 +52,6 @@
 #define CONFIG_SYS_MONITOR_LEN	(256 * 1024)
 #define CONFIG_SYS_MALLOC_LEN	(384 * 1024)
 
-
 /*
  * Network Settings
  */
@@ -68,7 +66,6 @@
 		SSYNC(); \
 	} while (0)
 #define CONFIG_HOSTNAME		bf533-stamp
-
 
 /* I2C */
 #define CONFIG_SYS_I2C
@@ -134,7 +131,6 @@
 	common/env_embedded.o (.text*);
 #endif
 
-
 /*
  * I2C Settings
  */
@@ -156,7 +152,6 @@
 /* #define CONFIG_STAMP_CF */
 #if defined(CONFIG_STAMP_CF)
 #define CONFIG_MISC_INIT_R
-#define CONFIG_DOS_PARTITION	1
 #undef  CONFIG_IDE_8xx_DIRECT		/* no pcmcia interface required */
 #undef  CONFIG_IDE_LED			/* no led for ide supported */
 #undef  CONFIG_IDE_RESET		/* no reset for ide supported */
@@ -177,7 +172,6 @@
 #define CONFIG_EBIU_AMBCTL1_VAL	0x99B3ffc2
 #endif
 
-
 /*
  * Misc Settings
  */
@@ -191,26 +185,8 @@
 /* #define CONFIG_SHOW_BOOT_PROGRESS */
 
 /* define to enable run status via led */
-/* #define CONFIG_STATUS_LED */
-#ifdef CONFIG_STATUS_LED
-#define CONFIG_GPIO_LED
-#define CONFIG_BOARD_SPECIFIC_LED
-/* use LED0 to indicate booting/alive */
-#define STATUS_LED_BOOT 0
-#define STATUS_LED_BIT GPIO_PF2
-#define STATUS_LED_STATE STATUS_LED_ON
-#define STATUS_LED_PERIOD (CONFIG_SYS_HZ / 4)
-/* use LED1 to indicate crash */
-#define STATUS_LED_CRASH 1
-#define STATUS_LED_BIT1 GPIO_PF3
-#define STATUS_LED_STATE1 STATUS_LED_ON
-#define STATUS_LED_PERIOD1 (CONFIG_SYS_HZ / 2)
-/* #define STATUS_LED_BIT2 GPIO_PF4 */
-#endif
 
 /* define to enable splash screen support */
-/* #define CONFIG_VIDEO */
-
 
 /*
  * Pull in common ADI header for remaining command/environment setup

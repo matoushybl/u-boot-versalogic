@@ -21,13 +21,11 @@
 
 #define	CONFIG_SYS_TEXT_BASE	0xFFF00000
 
-
 /* Serial Console Configuration */
 #define	CONFIG_5xx_CONS_SCI1
 #undef	CONFIG_5xx_CONS_SCI2
 
 #define CONFIG_BAUDRATE		9600
-
 
 /*
  * BOOTP options
@@ -36,7 +34,6 @@
 #define CONFIG_BOOTP_BOOTPATH
 #define CONFIG_BOOTP_GATEWAY
 #define CONFIG_BOOTP_HOSTNAME
-
 
 /*
  * Command line configuration.
@@ -47,26 +44,17 @@
 #define CONFIG_CMD_EEPROM
 #define CONFIG_CMD_IRQ
 
-
-#if 0
-#define CONFIG_BOOTDELAY	-1		/* autoboot disabled			*/
-#else
-#define CONFIG_BOOTDELAY	5		/* autoboot after 5 seconds		*/
-#endif
 #define CONFIG_BOOTCOMMAND	""	/* autoboot command			*/
 
 #define CONFIG_BOOTARGS		""		/* */
 
 #define CONFIG_WATCHDOG				/* turn on platform specific watchdog	*/
 
-/*#define CONFIG_STATUS_LED	1		*/ /* Enable status led */
-
 #define CONFIG_LOADS_ECHO	1		/* Echo on for serial download */
 
 /*
  * Miscellaneous configurable options
  */
-#define CONFIG_SYS_CONSOLE_IS_IN_ENV	/* stdin, stdout and stderr are in evironment */
 #define CONFIG_PREBOOT
 
 #define	CONFIG_SYS_LONGHELP				/* undef to save memory		*/
@@ -85,8 +73,6 @@
 #define	CONFIG_SYS_LOAD_ADDR		0x100000	/* default load address		*/
 
 #define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200, 1250000 }
-
-#define CONFIG_BOARD_EARLY_INIT_F
 
 /***********************************************************************
  * Last Stage Init
@@ -135,7 +121,6 @@
  */
 #define	CONFIG_SYS_BOOTMAPSZ		(8 << 20)	/* Initial Memory map for Linux		*/
 
-
 /*-----------------------------------------------------------------------
  * FLASH organization
  *-----------------------------------------------------------------------
@@ -164,7 +149,6 @@
 #define	CONFIG_ENV_SIZE		0x00002000		/* Set whole sector as env		*/
 #define CONFIG_ENV_OFFSET		((0 - CONFIG_SYS_FLASH_BASE) - CONFIG_ENV_SIZE)		/* Environment starts at this adress	*/
 #endif
-
 
 #define CONFIG_SPI		1
 #define CONFIG_SYS_SPI_CS_USED	0x09 /* CS0 and CS3 are used */
@@ -224,7 +208,6 @@
  */
 #define CONFIG_SYS_OSC_CLK	((uint)4000000)		/* Oscillator clock is 4MHz	*/
 
-
 #define CONFIG_SYS_PLPRCR	(PLPRCR_MF_9 | PLPRCR_DIVF_0)
 
 /*-----------------------------------------------------------------------
@@ -263,10 +246,5 @@
  * Initialise to zero
  */
 #define CONFIG_SYS_DER			0x00000000
-
-#define VERSION_TAG "released"
-#define CONFIG_ISO_STRING "MEV-10084-001"
-
-#define CONFIG_IDENT_STRING "\n(c) 2003 by MPL AG Switzerland, " CONFIG_ISO_STRING " " VERSION_TAG
 
 #endif	/* __CONFIG_H */

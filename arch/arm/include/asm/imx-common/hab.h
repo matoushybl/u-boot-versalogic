@@ -90,6 +90,23 @@ struct imx_sec_config_fuse_t {
 	int word;
 };
 
+struct __packed hab_hdr {
+	uint8_t tag;              /* Tag field */
+	uint8_t len[2];           /* Length field in bytes (big-endian) */
+	uint8_t par;              /* Parameters field */
+};
+
+struct hab_ivt {
+	struct hab_hdr hdr;
+	uint32_t entry;
+	uint32_t reserved1;
+	uint32_t dcd;
+	uint32_t boot_data;
+	uint32_t self;
+	uint32_t csf;
+	uint32_t reserved2;
+};
+
 #if defined(CONFIG_SECURE_BOOT)
 extern struct imx_sec_config_fuse_t const imx_sec_config_fuse;
 #endif
@@ -123,26 +140,49 @@ typedef void hapi_clock_init_t(void);
 #define HAB_ENG_SW		0xff   /* Software engine */
 
 #ifdef CONFIG_ROM_UNIFIED_SECTIONS
+#ifdef CONFIG_ARM64
+#define HAB_RVT_BASE			0x00000880
+#else
 #define HAB_RVT_BASE			0x00000100
+#endif
 #else
 #define HAB_RVT_BASE			0x00000094
 #endif
 
-#define HAB_RVT_ENTRY			(*(uint32_t *)(HAB_RVT_BASE + 0x04))
-#define HAB_RVT_EXIT			(*(uint32_t *)(HAB_RVT_BASE + 0x08))
-#define HAB_RVT_AUTHENTICATE_IMAGE	(*(uint32_t *)(HAB_RVT_BASE + 0x10))
-#define HAB_RVT_REPORT_EVENT		(*(uint32_t *)(HAB_RVT_BASE + 0x20))
-#define HAB_RVT_REPORT_STATUS		(*(uint32_t *)(HAB_RVT_BASE + 0x24))
+#define HAB_RVT_ENTRY_ARM64			((ulong)*(uint32_t *)(HAB_RVT_BASE + 0x08))
+#define HAB_RVT_EXIT_ARM64			((ulong)*(uint32_t *)(HAB_RVT_BASE + 0x10))
+#define HAB_RVT_AUTHENTICATE_IMAGE_ARM64	((ulong)*(uint32_t *)(HAB_RVT_BASE + 0x20))
+#define HAB_RVT_REPORT_EVENT_ARM64		((ulong)*(uint32_t *)(HAB_RVT_BASE + 0x40))
+#define HAB_RVT_REPORT_STATUS_ARM64		((ulong)*(uint32_t *)(HAB_RVT_BASE + 0x48))
 
-#define HAB_RVT_REPORT_EVENT_NEW               (*(uint32_t *)0x000000B8)
-#define HAB_RVT_REPORT_STATUS_NEW              (*(uint32_t *)0x000000BC)
-#define HAB_RVT_AUTHENTICATE_IMAGE_NEW         (*(uint32_t *)0x000000A8)
-#define HAB_RVT_ENTRY_NEW                      (*(uint32_t *)0x0000009C)
-#define HAB_RVT_EXIT_NEW                       (*(uint32_t *)0x000000A0)
+#define HAB_RVT_ENTRY			((ulong)*(uint32_t *)(HAB_RVT_BASE + 0x04))
+#define HAB_RVT_EXIT			((ulong)*(uint32_t *)(HAB_RVT_BASE + 0x08))
+#define HAB_RVT_AUTHENTICATE_IMAGE	((ulong)*(uint32_t *)(HAB_RVT_BASE + 0x10))
+#define HAB_RVT_REPORT_EVENT		((ulong)*(uint32_t *)(HAB_RVT_BASE + 0x20))
+#define HAB_RVT_REPORT_STATUS		((ulong)*(uint32_t *)(HAB_RVT_BASE + 0x24))
+
+#define HAB_RVT_REPORT_EVENT_NEW               ((ulong)*(uint32_t *)0x000000B8)
+#define HAB_RVT_REPORT_STATUS_NEW              ((ulong)*(uint32_t *)0x000000BC)
+#define HAB_RVT_AUTHENTICATE_IMAGE_NEW         ((ulong)*(uint32_t *)0x000000A8)
+#define HAB_RVT_ENTRY_NEW                      ((ulong)*(uint32_t *)0x0000009C)
+#define HAB_RVT_EXIT_NEW                       ((ulong)*(uint32_t *)0x000000A0)
 
 #define HAB_CID_ROM 0 /**< ROM Caller ID */
 #define HAB_CID_UBOOT 1 /**< UBOOT Caller ID*/
 
+#define HAB_CMD_HDR       0xD4  /* CSF Header */
+#define HAB_CMD_WRT_DAT   0xCC  /* Write Data */
+
+#define HAB_HDR_LEN(hdr)				\
+		((size_t)(((const struct hab_hdr *)&(hdr))->len[0] << 8) \
+		 + (size_t)((const struct hab_hdr *)&(hdr))->len[1])
+
+#define HAB_TAG_IVT       0xD1
+#define IVT_HDR_LEN       0x20
+#define HAB_MAJ_VER       0x40
+#define HAB_MAJ_MASK      0xF0
 /* ----------- end of HAB API updates ------------*/
+
+uint32_t authenticate_image(uint32_t ddr_start, uint32_t image_size);
 
 #endif

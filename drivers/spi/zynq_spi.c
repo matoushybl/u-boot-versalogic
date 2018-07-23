@@ -71,7 +71,7 @@ static int zynq_spi_ofdata_to_platdata(struct udevice *bus)
 {
 	struct zynq_spi_platdata *plat = bus->platdata;
 	const void *blob = gd->fdt_blob;
-	int node = bus->of_offset;
+	int node = dev_of_offset(bus);
 
 	plat->regs = (struct zynq_spi_regs *)dev_get_addr(bus);
 
@@ -92,7 +92,8 @@ static void zynq_spi_init_hw(struct zynq_spi_priv *priv)
 	u32 confr;
 
 	/* Disable SPI */
-	writel(~ZYNQ_SPI_ENR_SPI_EN_MASK, &regs->enr);
+	confr = ZYNQ_SPI_ENR_SPI_EN_MASK;
+	writel(~confr, &regs->enr);
 
 	/* Disable Interrupts */
 	writel(ZYNQ_SPI_IXR_ALL_MASK, &regs->idr);
@@ -173,8 +174,10 @@ static int zynq_spi_release_bus(struct udevice *dev)
 	struct udevice *bus = dev->parent;
 	struct zynq_spi_priv *priv = dev_get_priv(bus);
 	struct zynq_spi_regs *regs = priv->regs;
+	u32 confr;
 
-	writel(~ZYNQ_SPI_ENR_SPI_EN_MASK, &regs->enr);
+	confr = ZYNQ_SPI_ENR_SPI_EN_MASK;
+	writel(~confr, &regs->enr);
 
 	return 0;
 }
@@ -230,7 +233,7 @@ static int zynq_spi_xfer(struct udevice *dev, unsigned int bitlen,
 
 		/* Read the data from RX FIFO */
 		status = readl(&regs->isr);
-		while (status & ZYNQ_SPI_IXR_RXNEMPTY_MASK) {
+		while ((status & ZYNQ_SPI_IXR_RXNEMPTY_MASK) && rx_len) {
 			buf = readl(&regs->rxdr);
 			if (rx_buf)
 				*rx_buf++ = buf;

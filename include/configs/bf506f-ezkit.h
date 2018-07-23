@@ -7,13 +7,11 @@
 
 #include <asm/config-pre.h>
 
-
 /*
  * Processor Settings
  */
 #define CONFIG_BFIN_CPU             bf506-0.0
 #define CONFIG_BFIN_BOOT_MODE       BFIN_BOOT_PARA
-
 
 /*
  * Clock Settings
@@ -38,7 +36,6 @@
 /* Values can range from 1-15						*/
 #define CONFIG_SCLK_DIV			5
 
-
 /*
  * Memory Settings
  */
@@ -52,7 +49,6 @@
 #define CONFIG_SYS_MONITOR_LEN	(4 * 1024)
 #define CONFIG_SYS_MALLOC_LEN	(4 * 1024)
 
-
 /*
  * Flash Settings
  */
@@ -64,7 +60,6 @@
 #define CONFIG_SYS_MAX_FLASH_SECT	71
 #define CONFIG_MONITOR_IS_IN_RAM
 */
-#define CONFIG_SYS_NO_FLASH
 
 /*
  * SPI Settings
@@ -72,10 +67,6 @@
 #define CONFIG_BFIN_SPI
 #define CONFIG_ENV_SPI_MAX_HZ	30000000
 #define CONFIG_SF_DEFAULT_SPEED	30000000
-/*
-#define CONFIG_CMD_SF
-#define CONFIG_CMD_SPI
-*/
 
 /*
  * Env Storage Settings
@@ -83,11 +74,9 @@
 #define CONFIG_ENV_IS_NOWHERE
 #define CONFIG_ENV_SIZE 0x400
 
-
 /*
  * Misc Settings
  */
-#define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_ICACHE_OFF
 #define CONFIG_DCACHE_OFF
 #define CONFIG_UART_CONSOLE	0

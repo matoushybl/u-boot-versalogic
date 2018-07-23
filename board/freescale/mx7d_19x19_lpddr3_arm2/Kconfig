@@ -9,4 +9,9 @@ config SYS_VENDOR
 config SYS_CONFIG_NAME
 	default "mx7d_19x19_lpddr3_arm2"
 
+config NOR
+	bool "Support for NOR flash"
+	help
+	  The i.MX SoC supports having a NOR flash connected to the WEIM.
+	  Need to set this for NOR_BOOT.
 endif

@@ -29,10 +29,9 @@
 # define DEBUGF(fmt, args...)
 #endif
 
-#ifdef CONFIG_CRAMFS_CMDLINE
 #include <flash.h>
 
-#ifdef CONFIG_SYS_NO_FLASH
+#ifndef CONFIG_MTD_NOR_FLASH
 # define OFFSET_ADJUSTMENT	0
 #else
 # define OFFSET_ADJUSTMENT	(flash_info[id.num].start[0])
@@ -201,7 +200,3 @@ U_BOOT_CMD(
 	"[ directory ]\n"
 	"    - list files in a directory.\n"
 );
-
-#endif /* #ifdef CONFIG_CRAMFS_CMDLINE */
-
-/***************************************************/

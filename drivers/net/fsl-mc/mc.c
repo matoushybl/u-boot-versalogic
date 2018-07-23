@@ -8,6 +8,7 @@
 #include <linux/bug.h>
 #include <asm/io.h>
 #include <libfdt.h>
+#include <net.h>
 #include <fdt_support.h>
 #include <fsl-mc/fsl_mc.h>
 #include <fsl-mc/fsl_mc_sys.h>
@@ -40,6 +41,7 @@ int child_dprc_id;
 struct fsl_dpbp_obj *dflt_dpbp = NULL;
 struct fsl_dpio_obj *dflt_dpio = NULL;
 struct fsl_dpni_obj *dflt_dpni = NULL;
+static u64 mc_lazy_dpl_addr;
 
 #ifdef DEBUG
 void dump_ram_words(const char *title, void *addr)
@@ -194,10 +196,81 @@ static int calculate_mc_private_ram_params(u64 mc_private_ram_start_addr,
 	return 0;
 }
 
+static int mc_fixup_dpc_mac_addr(void *blob, int noff, int dpmac_id,
+		struct eth_device *eth_dev)
+{
+	int nodeoffset, err = 0;
+	char mac_name[10];
+	const char link_type_mode[] = "FIXED_LINK";
+	unsigned char env_enetaddr[6];
+
+	sprintf(mac_name, "mac@%d", dpmac_id);
+
+	/* node not found - create it */
+	nodeoffset = fdt_subnode_offset(blob, noff, (const char *) mac_name);
+	if (nodeoffset < 0) {
+		err = fdt_increase_size(blob, 200);
+		if (err) {
+			printf("fdt_increase_size: err=%s\n",
+				fdt_strerror(err));
+			return err;
+		}
+
+		nodeoffset = fdt_add_subnode(blob, noff, mac_name);
+
+		/* add default property of fixed link */
+		err = fdt_appendprop_string(blob, nodeoffset,
+					    "link_type", link_type_mode);
+		if (err) {
+			printf("fdt_appendprop_string: err=%s\n",
+				fdt_strerror(err));
+			return err;
+		}
+	}
+
+	/* port_mac_address property present in DPC */
+	if (fdt_get_property(blob, nodeoffset, "port_mac_address", NULL)) {
+		/* MAC addr randomly assigned - leave the one in DPC */
+		eth_getenv_enetaddr_by_index("eth", eth_dev->index,
+						env_enetaddr);
+		if (is_zero_ethaddr(env_enetaddr))
+			return err;
+
+		/* replace DPC MAC address with u-boot env one */
+		err = fdt_setprop(blob, nodeoffset, "port_mac_address",
+				  eth_dev->enetaddr, 6);
+		if (err) {
+			printf("fdt_setprop mac: err=%s\n", fdt_strerror(err));
+			return err;
+		}
+
+		return 0;
+	}
+
+	/* append port_mac_address property to mac node in DPC */
+	err = fdt_increase_size(blob, 80);
+	if (err) {
+		printf("fdt_increase_size: err=%s\n", fdt_strerror(err));
+		return err;
+	}
+
+	err = fdt_appendprop(blob, nodeoffset,
+			     "port_mac_address", eth_dev->enetaddr, 6);
+	if (err) {
+		printf("fdt_appendprop: err=%s\n", fdt_strerror(err));
+		return err;
+	}
+
+	return err;
+}
+
 static int mc_fixup_dpc(u64 dpc_addr)
 {
 	void *blob = (void *)dpc_addr;
-	int nodeoffset;
+	int nodeoffset, err = 0;
+	char ethname[10];
+	struct eth_device *eth_dev;
+	int i;
 
 	/* delete any existing ICID pools */
 	nodeoffset = fdt_path_offset(blob, "/resources/icid_pools");
@@ -219,9 +292,36 @@ static int mc_fixup_dpc(u64 dpc_addr)
 			     FSL_DPAA2_STREAM_ID_END -
 			     FSL_DPAA2_STREAM_ID_START + 1, 1);
 
+	/* fixup MAC addresses for dpmac ports */
+	nodeoffset = fdt_path_offset(blob, "/board_info/ports");
+	if (nodeoffset < 0)
+		goto out;
+
+	for (i = WRIOP1_DPMAC1; i < NUM_WRIOP_PORTS; i++) {
+		/* port not enabled */
+		if ((wriop_is_enabled_dpmac(i) != 1) ||
+		    (wriop_get_phy_address(i) == -1))
+			continue;
+
+		sprintf(ethname, "DPMAC%d@%s", i,
+			phy_interface_strings[wriop_get_enet_if(i)]);
+
+		eth_dev = eth_get_dev_by_name(ethname);
+		if (eth_dev == NULL)
+			continue;
+
+		err = mc_fixup_dpc_mac_addr(blob, nodeoffset, i, eth_dev);
+		if (err) {
+			printf("mc_fixup_dpc_mac_addr failed: err=%s\n",
+			fdt_strerror(err));
+			goto out;
+		}
+	}
+
+out:
 	flush_dcache_range(dpc_addr, dpc_addr + fdt_totalsize(blob));
 
-	return 0;
+	return err;
 }
 
 static int load_mc_dpc(u64 mc_ram_addr, size_t mc_ram_size, u64 mc_dpc_addr)
@@ -356,6 +456,12 @@ static unsigned long get_mc_boot_timeout_ms(void)
 }
 
 #ifdef CONFIG_SYS_LS_MC_DRAM_AIOP_IMG_OFFSET
+
+__weak bool soc_has_aiop(void)
+{
+	return false;
+}
+
 static int load_mc_aiop_img(u64 aiop_fw_addr)
 {
 	u64 mc_ram_addr = mc_get_dram_addr();
@@ -363,6 +469,9 @@ static int load_mc_aiop_img(u64 aiop_fw_addr)
 	void *aiop_img;
 #endif
 
+	/* Check if AIOP is available */
+	if (!soc_has_aiop())
+		return -ENODEV;
 	/*
 	 * Load the MC AIOP image in the MC private DRAM block:
 	 */
@@ -563,6 +672,9 @@ int mc_apply_dpl(u64 mc_dpl_addr)
 	u64 mc_ram_addr = mc_get_dram_addr();
 	size_t mc_ram_size = mc_get_dram_block_size();
 
+	if (!mc_dpl_addr)
+		return -1;
+
 	error = load_mc_dpl(mc_ram_addr, mc_ram_size, mc_dpl_addr);
 	if (error != 0)
 		return error;
@@ -747,11 +859,11 @@ static int dpio_init(void)
 err_get_swp_init:
 	dpio_disable(dflt_mc_io, MC_CMD_NO_FLAGS, dflt_dpio->dpio_handle);
 err_get_enable:
-	free(dflt_dpio);
 err_get_attr:
 	dpio_close(dflt_mc_io, MC_CMD_NO_FLAGS, dflt_dpio->dpio_handle);
 	dpio_destroy(dflt_mc_io, MC_CMD_NO_FLAGS, dflt_dpio->dpio_handle);
 err_create:
+	free(dflt_dpio);
 err_malloc:
 	return err;
 }
@@ -1147,7 +1259,13 @@ int fsl_mc_ldpaa_exit(bd_t *bd)
 {
 	int err = 0;
 
-	if (bd && get_mc_boot_status() == -1)
+	if (bd && mc_lazy_dpl_addr && !fsl_mc_ldpaa_exit(NULL)) {
+		mc_apply_dpl(mc_lazy_dpl_addr);
+		mc_lazy_dpl_addr = 0;
+	}
+
+	/* MC is not loaded intentionally, So return success. */
+	if (bd && get_mc_boot_status() != 0)
 		return 0;
 
 	if (bd && !get_mc_boot_status() && get_dpl_apply_status() == -1) {
@@ -1234,6 +1352,7 @@ static int do_fsl_mc(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 				aiop_fw_addr = simple_strtoull(argv[3], NULL,
 							       16);
 
+				/* if SoC doesn't have AIOP, err = -ENODEV */
 				err = load_mc_aiop_img(aiop_fw_addr);
 				if (!err)
 					printf("fsl-mc: AIOP FW applied\n");
@@ -1248,6 +1367,7 @@ static int do_fsl_mc(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		}
 		break;
 
+	case 'l':
 	case 'a': {
 			u64 mc_dpl_addr;
 
@@ -1268,8 +1388,17 @@ static int do_fsl_mc(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 				return -ENODEV;
 			}
 
-			if (!fsl_mc_ldpaa_exit(NULL))
-				err = mc_apply_dpl(mc_dpl_addr);
+			if (argv[1][0] == 'l') {
+				/*
+				 * We will do the actual dpaa exit and dpl apply
+				 * later from announce_and_cleanup().
+				 */
+				mc_lazy_dpl_addr = mc_dpl_addr;
+			} else {
+				/* The user wants it applied now */
+				if (!fsl_mc_ldpaa_exit(NULL))
+					err = mc_apply_dpl(mc_dpl_addr);
+			}
 			break;
 		}
 	default:
@@ -1287,5 +1416,6 @@ U_BOOT_CMD(
 	"DPAA2 command to manage Management Complex (MC)",
 	"start mc [FW_addr] [DPC_addr] - Start Management Complex\n"
 	"fsl_mc apply DPL [DPL_addr] - Apply DPL file\n"
+	"fsl_mc lazyapply DPL [DPL_addr] - Apply DPL file on exit\n"
 	"fsl_mc start aiop [FW_addr] - Start AIOP\n"
 );

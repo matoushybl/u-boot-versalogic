@@ -16,6 +16,7 @@
 #include <stdio_dev.h>
 #include <exports.h>
 #include <environment.h>
+#include <watchdog.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -47,7 +48,7 @@ static int on_console(const char *name, const char *value, enum env_op op,
 		/* Try assigning specified device */
 		if (console_assign(console, value) < 0)
 			return 1;
-#endif /* CONFIG_CONSOLE_MUX */
+#endif
 		return 0;
 
 	case env_op_delete:
@@ -294,6 +295,7 @@ int fgetc(int file)
 		 * Effectively poll for input wherever it may be available.
 		 */
 		for (;;) {
+			WATCHDOG_RESET();
 			/*
 			 * Upper layer may have already called tstc() so
 			 * check for that first.
@@ -515,8 +517,6 @@ void puts(const char *s)
 			int ch = *s++;
 
 			printch(ch);
-			if (ch == '\n')
-				printch('\r');
 		}
 		return;
 	}
@@ -689,15 +689,22 @@ int console_assign(int file, const char *devname)
 	return -1;
 }
 
+static void console_update_silent(void)
+{
+#ifdef CONFIG_SILENT_CONSOLE
+	if (getenv("silent") != NULL)
+		gd->flags |= GD_FLG_SILENT;
+	else
+		gd->flags &= ~GD_FLG_SILENT;
+#endif
+}
+
 /* Called before relocation - use serial functions */
 int console_init_f(void)
 {
 	gd->have_console = 1;
 
-#ifdef CONFIG_SILENT_CONSOLE
-	if (getenv("silent") != NULL)
-		gd->flags |= GD_FLG_SILENT;
-#endif
+	console_update_silent();
 
 	print_pre_console_buffer(PRE_CONSOLE_FLUSHPOINT1_SERIAL);
 
@@ -822,7 +829,7 @@ done:
 	return 0;
 }
 
-#else /* CONFIG_SYS_CONSOLE_IS_IN_ENV */
+#else /* !CONFIG_SYS_CONSOLE_IS_IN_ENV */
 
 /* Called after the relocation - use desired console functions */
 int console_init_r(void)
@@ -832,6 +839,8 @@ int console_init_r(void)
 	struct list_head *list = stdio_get_list();
 	struct list_head *pos;
 	struct stdio_dev *dev;
+
+	console_update_silent();
 
 #ifdef CONFIG_SPLASH_SCREEN
 	/*

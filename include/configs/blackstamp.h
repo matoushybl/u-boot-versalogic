@@ -102,23 +102,10 @@
 #define CONFIG_AUTO_COMPLETE	1
 #define CONFIG_ENV_OVERWRITE	1
 
-#ifdef CONFIG_SMC91111
-# define CONFIG_CMD_DHCP
-# define CONFIG_CMD_PING
-#else
-#endif
-
-#ifdef CONFIG_SYS_I2C_SOFT
-# define CONFIG_CMD_I2C
-#endif
-
 #define CONFIG_CMD_BOOTLDR
-#define CONFIG_CMD_CACHE
 #define CONFIG_CMD_CPLBINFO
 #define CONFIG_CMD_DATE
-#define CONFIG_CMD_SF
 
-#define CONFIG_BOOTDELAY     5
 #define CONFIG_BOOTCOMMAND   "run ramboot"
 #define CONFIG_BOOTARGS \
 	"root=/dev/mtdblock0 rw " \
@@ -227,11 +214,6 @@
 #define CONFIG_EBIU_SDRRC_VAL		0x268
 #define CONFIG_EBIU_SDGCTL_VAL		0x911109
 
-/* Even though Rev C boards have Parallel Flash
- * We aren't supporting it. Newer versions of the
- * hardware don't support Parallel Flash at all.
- */
-#define CONFIG_SYS_NO_FLASH
 #undef CONFIG_CMD_JFFS2
 
 #endif

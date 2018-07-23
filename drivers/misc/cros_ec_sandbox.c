@@ -517,15 +517,24 @@ int cros_ec_probe(struct udevice *dev)
 	struct ec_state *ec = dev->priv;
 	struct cros_ec_dev *cdev = dev->uclass_priv;
 	const void *blob = gd->fdt_blob;
+	struct udevice *keyb_dev;
 	int node;
 	int err;
 
 	memcpy(ec, &s_state, sizeof(*ec));
-	err = cros_ec_decode_ec_flash(blob, dev->of_offset, &ec->ec_config);
+	err = cros_ec_decode_ec_flash(blob, dev_of_offset(dev), &ec->ec_config);
 	if (err)
 		return err;
 
-	node = fdtdec_next_compatible(blob, 0, COMPAT_GOOGLE_CROS_EC_KEYB);
+	node = -1;
+	for (device_find_first_child(dev, &keyb_dev);
+	     keyb_dev;
+	     device_find_next_child(&keyb_dev)) {
+		if (device_get_uclass_id(keyb_dev) == UCLASS_KEYBOARD) {
+			node = dev_of_offset(keyb_dev);
+			break;
+		}
+	}
 	if (node < 0) {
 		debug("%s: No cros_ec keyboard found\n", __func__);
 	} else if (keyscan_read_fdt_matrix(ec, blob, node)) {

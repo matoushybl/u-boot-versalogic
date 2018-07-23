@@ -20,11 +20,14 @@
 #define PHYS_SDRAM_SIZE			SZ_2G
 #endif
 
-#define CONFIG_CMD_MII
 #define CONFIG_FEC_MXC
 #define CONFIG_MII
 #define CONFIG_FEC_XCV_TYPE             RGMII
+#ifdef CONFIG_DM_ETH
+#define CONFIG_ETHPRIME                 "eth0"
+#else
 #define CONFIG_ETHPRIME                 "FEC"
+#endif
 #define CONFIG_FEC_MXC_PHYADDR          0
 
 #define CONFIG_PHYLIB
@@ -32,41 +35,51 @@
 
 /* ENET2 */
 #define IMX_FEC_BASE			ENET2_IPS_BASE_ADDR
+
 #define CONFIG_FEC_MXC_MDIO_BASE	ENET_IPS_BASE_ADDR
 
 /* QSPI conflict with EIMNOR */
 /* FEC0 conflict with EIMNOR */
 /* ECSPI conflict with UART */
-#ifdef CONFIG_SYS_BOOT_QSPI
-#define CONFIG_SYS_USE_QSPI
+#ifdef CONFIG_QSPI_BOOT
+#define CONFIG_FSL_QSPI
 #define CONFIG_ENV_IS_IN_SPI_FLASH
-#elif defined CONFIG_SYS_BOOT_SPINOR
-#define CONFIG_SYS_USE_SPINOR
+#elif defined CONFIG_SPI_BOOT
+#define CONFIG_MXC_SPI
 #define CONFIG_ENV_IS_IN_SPI_FLASH
-#elif defined CONFIG_SYS_BOOT_EIMNOR
-#define CONFIG_SYS_USE_EIMNOR
+#elif defined CONFIG_NOR_BOOT
+#define CONFIG_MTD_NOR_FLASH
 #define CONFIG_ENV_IS_IN_FLASH
 #undef CONFIG_FEC_MXC
-#elif defined CONFIG_SYS_BOOT_NAND
-#define CONFIG_SYS_USE_NAND
+#elif defined CONFIG_NAND_BOOT
+#define CONFIG_NAND_MXS
 #define CONFIG_ENV_IS_IN_NAND
 #else
-#define CONFIG_SYS_USE_EIMNOR
+#define CONFIG_MTD_NOR_FLASH
 #undef CONFIG_FEC_MXC
 #define CONFIG_ENV_IS_IN_MMC
 #endif
 
+#ifndef CONFIG_DM_I2C
+#define CONFIG_SYS_I2C
+#endif
+#ifdef CONFIG_CMD_I2C
+#define CONFIG_SYS_I2C_MXC_I2C1		/* enable I2C bus 1 */
+#define CONFIG_SYS_I2C_MXC_I2C2		/* enable I2C bus 2 */
+#endif
+
 /* PMIC */
+#ifndef CONFIG_DM_PMIC
 #define CONFIG_POWER
 #define CONFIG_POWER_I2C
 #define CONFIG_POWER_PFUZE3000
 #define CONFIG_POWER_PFUZE3000_I2C_ADDR	0x08
+#endif
 
-#ifdef CONFIG_SYS_USE_SPINOR
+#ifdef CONFIG_MXC_SPI
 #define CONFIG_CMD_SF
 #define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_ATMEL
-#define CONFIG_MXC_SPI
 #define CONFIG_SF_DEFAULT_BUS  0
 #define CONFIG_SF_DEFAULT_SPEED 20000000
 #define CONFIG_SF_DEFAULT_MODE (SPI_MODE_0)

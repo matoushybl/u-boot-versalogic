@@ -18,7 +18,6 @@
 #undef CONFIG_USB_EHCI
 #undef CONFIG_USB_EHCI_OMAP
 #undef CONFIG_USB_OMAP3
-#undef CONFIG_CMD_USB
 
 /* Our console port is port3 */
 #undef CONFIG_CONS_INDEX
@@ -29,10 +28,8 @@
 #define CONFIG_SYS_NS16550_COM3	OMAP34XX_UART3
 #define CONFIG_SERIAL3
 
-#define MACH_TYPE_ECO5_PK	4017
 #define CONFIG_MACH_TYPE	MACH_TYPE_ECO5_PK
 
-#define CONFIG_BOOTDELAY	10
 #define CONFIG_BOOTFILE		"uImage"
 #define CONFIG_AUTO_COMPLETE
 
@@ -58,6 +55,5 @@
 				"nand write $fileaddr kernel; fi\0" \
 	"mtdparts="MTDPARTS_DEFAULT"\0" \
 	"serverip=192.168.142.60\0"
-
 
 #endif /* __CONFIG_H */

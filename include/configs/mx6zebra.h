@@ -10,14 +10,12 @@
 #define __MX6ZEBRA_CONFIG_H
 
 #ifdef CONFIG_SPL
-#define CONFIG_SPL_LIBCOMMON_SUPPORT
-#define CONFIG_SPL_MMC_SUPPORT
 #include "imx6_spl.h"
 #endif
 
 #define CONFIG_MACH_TYPE	3980
 #define CONFIG_MXC_UART_BASE	UART1_BASE
-#define CONFIG_CONSOLE_DEV		"ttymxc0"
+#define CONSOLE_DEV		"ttymxc0"
 #define CONFIG_MMCROOT			"/dev/mmcblk1p2"  /* SDHC2 */
 
 /* This is for the 4GB Prototype 1 board only. Will change to 2GB for Prod. */
@@ -37,13 +35,13 @@
 
 #define CONFIG_SYS_FSL_USDHC_NUM	2
 #define CONFIG_SYS_MMC_ENV_DEV		0	/* SDHC2 */
+#ifndef CONFIG_SYS_MMC_ENV_PART
 #define CONFIG_SYS_MMC_ENV_PART                0       /* user partition */
+#endif
 
-/*
-#ifdef CONFIG_SYS_USE_SPINOR
+#ifdef CONFIG_CMD_SF
 #define CONFIG_SF_DEFAULT_CS   0
 #endif
-*/
 
 /*
  * imx6 q/dl/solo pcie would be failed to work properly in kernel, if
@@ -56,10 +54,8 @@
  * Remove the mask freely, if the uboot pcie functions, rather than
  * the kernel's, are required.
  */
-/* #define CONFIG_CMD_PCI */
-#ifdef CONFIG_CMD_PCI
-#define CONFIG_PCI
-#define CONFIG_PCI_PNP
+#ifdef CONFIG_PCI
+#define CONFIG_CMD_PCI
 #define CONFIG_PCI_SCAN_SHOW
 #define CONFIG_PCIE_IMX
 #define CONFIG_PCIE_IMX_PERST_GPIO	IMX_GPIO_NR(7, 12)
@@ -67,11 +63,9 @@
 #endif
 
 /* USB Configs */
-#define CONFIG_CMD_USB
 #ifdef CONFIG_CMD_USB
 #define CONFIG_USB_EHCI
 #define CONFIG_USB_EHCI_MX6
-#define CONFIG_USB_STORAGE
 #define CONFIG_EHCI_HCD_INIT_AFTER_RESET
 #define CONFIG_USB_HOST_ETHER
 #define CONFIG_USB_ETHER_ASIX
@@ -91,8 +85,6 @@
 	 * Framebuffer and LCD
 	 */
 	#define CONFIG_CMD_BMP
-	#define CONFIG_LCD
-	#define CONFIG_SYS_CONSOLE_IS_IN_ENV
 	#undef LCD_TEST_PATTERN
 	/* #define CONFIG_SPLASH_IS_IN_MMC			1 */
 	#define LCD_BPP					LCD_MONOCHROME

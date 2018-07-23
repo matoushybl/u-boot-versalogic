@@ -10,7 +10,7 @@
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/iomux.h>
 #include <asm/arch/mx6-pins.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <asm/gpio.h>
 #include <asm/imx-common/mxc_i2c.h>
 #include <asm/imx-common/iomux-v3.h>
@@ -145,20 +145,26 @@ static void setup_iomux_enet(void)
 	imx_iomux_v3_setup_multiple_pads(enet_pads1, ARRAY_SIZE(enet_pads1));
 
 	/* Reset AR8031 PHY */
+	gpio_request(IMX_GPIO_NR(1, 25), "GPIO1_25"); 
+        gpio_request(IMX_GPIO_NR(6, 24), "GPIO6_24");
+        gpio_request(IMX_GPIO_NR(6, 25), "GPIO6_25");
+        gpio_request(IMX_GPIO_NR(6, 27), "GPIO6_27");
+        gpio_request(IMX_GPIO_NR(6, 28), "GPIO6_28");
+        gpio_request(IMX_GPIO_NR(6, 29), "GPIO6_29");
         gpio_direction_output(IMX_GPIO_NR(1, 25), 0); /* assert PHY rst */
- 
+
         gpio_direction_output(IMX_GPIO_NR(6, 24), 1);
         gpio_direction_output(IMX_GPIO_NR(6, 25), 1);
         gpio_direction_output(IMX_GPIO_NR(6, 27), 1);
         gpio_direction_output(IMX_GPIO_NR(6, 28), 1);
         gpio_direction_output(IMX_GPIO_NR(6, 29), 1);
         udelay(1000 * 10);
- 
+
         gpio_set_value(IMX_GPIO_NR(1, 25), 1); /* deassert PHY rst */
- 
+
         /* Need delay 100ms to exit from reset. */
         udelay(1000 * 100);
- 
+
         gpio_free(IMX_GPIO_NR(6, 24));
         gpio_free(IMX_GPIO_NR(6, 25));
         gpio_free(IMX_GPIO_NR(6, 27));
@@ -239,12 +245,13 @@ static void setup_spi(void)
 
 	imx_iomux_v3_setup_multiple_pads(ecspi1_pads, ARRAY_SIZE(ecspi1_pads));
         imx_iomux_v3_setup_multiple_pads(ecspi3_pads, ARRAY_SIZE(ecspi3_pads));
+	gpio_request(IMX_GPIO_NR(2, 30), "SPI GPIO");
         gpio_direction_output(IMX_GPIO_NR(2, 30), 0);
 }
 
 int board_spi_cs_gpio(unsigned bus, unsigned cs)
 {
-	return (bus == 0 && cs == 0) ? (IMX_GPIO_NR(2, 30)) : 0; 
+	return (bus == 0 && cs == 0) ? (IMX_GPIO_NR(2, 30)) : 0;
 }
 static iomux_v3_cfg_t const rgb_pads[] = {
 	MX6_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK | MUX_PAD_CTRL(NO_PAD_CTRL),
@@ -675,7 +682,7 @@ static void setup_fec(void)
 	if (is_mx6dqp()) {
 		int ret;
 
-		// select ENET MAC0 TX clock from PLL 
+		// select ENET MAC0 TX clock from PLL
 		imx_iomux_set_gpr_register(1, 23, 1, 1);
 		ret = enable_fec_anatop_clock(0, ENET_125MHZ);
 		if (ret)
@@ -788,7 +795,7 @@ int board_init(void)
 	setup_spi();
 #endif
 /*
-	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1); 
+	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
         setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);
 */
 	setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info3);
@@ -848,6 +855,7 @@ int checkboard(void)
 	return 0;
 }
 
+#ifdef CONFIG_POWER
 int power_init_board(void)
 {
         struct pmic *pfuze;
@@ -1006,7 +1014,7 @@ void ldo_mode_set(int ldo_bypass)
         }
 }
 #endif
-
+#endif
 
 #ifdef CONFIG_FSL_FASTBOOT
 

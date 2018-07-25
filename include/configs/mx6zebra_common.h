@@ -11,6 +11,7 @@
 
 #include "mx6_common.h"
 
+#define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_IMX_THERMAL
 
 /* Size of malloc() pool */
@@ -283,7 +284,7 @@
 #if defined(CONFIG_ENV_IS_IN_MMC)
 #define CONFIG_ENV_OFFSET		(896 * 1024)
 #elif defined(CONFIG_ENV_IS_IN_SPI_FLASH)
-#define CONFIG_ENV_OFFSET              (896 * 1024)
+#define CONFIG_ENV_OFFSET              (768 * 1024)
 #define CONFIG_ENV_SECT_SIZE           (64 * 1024)
 #define CONFIG_ENV_SPI_BUS             CONFIG_SF_DEFAULT_BUS
 #define CONFIG_ENV_SPI_CS              CONFIG_SF_DEFAULT_CS
@@ -354,5 +355,6 @@
 #endif
 
 #endif /* CONFIG_ANDROID_SUPPORT */
+
 
 #endif                         /* __MX6ZEBRA_COMMON_CONFIG_H */

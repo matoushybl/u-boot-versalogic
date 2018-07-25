@@ -72,10 +72,11 @@ DECLARE_GLOBAL_DATA_PTR;
 	PAD_CTL_DSE_80ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
 
 
-#define I2C_PMIC	2
+//#define I2C_PMIC	1
 
 #define I2C_PAD MUX_PAD_CTRL(I2C_PAD_CTRL)
 
+#define DISP0_PWR_EN	IMX_GPIO_NR(1, 30)
 
 int dram_init(void)
 {
@@ -288,7 +289,6 @@ static iomux_v3_cfg_t const rgb_pads[] = {
 
 static void enable_rgb(struct display_info_t const *dev)
 {
-	#define DISP0_PWR_EN	IMX_GPIO_NR(1, 30)
 	imx_iomux_v3_setup_multiple_pads(rgb_pads, ARRAY_SIZE(rgb_pads));
 	gpio_direction_output(DISP0_PWR_EN, 1);
 }
@@ -353,17 +353,41 @@ struct fsl_esdhc_cfg usdhc_cfg[2] = {
 
 #define USDHC2_CD_GPIO	IMX_GPIO_NR(1, 4)
 //#define USDHC3_CD_GPIO	IMX_GPIO_NR(2, 0)
-/*
 int board_mmc_get_env_dev(int devno)
 {
 	return devno - 1;
 }
 
+int mmc_get_env_dev(void)
+{
+        u32 soc_sbmr = readl(SRC_BASE_ADDR + 0x4);
+        u32 dev_no;
+        u32 bootsel;
+
+        bootsel = (soc_sbmr & 0x000000FF) >> 6 ;
+
+        /* If not boot from sd/mmc, use default value */
+        if (bootsel != 1)
+                return CONFIG_SYS_MMC_ENV_DEV;
+
+        /* BOOT_CFG2[3] and BOOT_CFG2[4] */
+        dev_no = (soc_sbmr & 0x00001800) >> 11;
+
+        /* need ubstract 1 to map to the mmc device id
+         * see the comments in board_mmc_init function
+         */
+
+        dev_no--;
+
+        return dev_no;
+}
+
+
 int mmc_map_to_kernel_blk(int devno)
 {
 	return devno + 1;
 }
-*/
+
 int board_mmc_getcd(struct mmc *mmc)
 {
 	struct fsl_esdhc_cfg *cfg = (struct fsl_esdhc_cfg *)mmc->priv;
@@ -787,6 +811,7 @@ int board_init(void)
 	//RESET Peripherals
 	imx_iomux_v3_setup_multiple_pads(peripheral_reset_pad,
 						 ARRAY_SIZE(peripheral_reset_pad));
+	gpio_request(IMX_GPIO_NR(5, 2), "GPIO 5_2");
 	gpio_set_value(IMX_GPIO_NR(5, 2), 0);
 	mdelay(2);
 	gpio_set_value(IMX_GPIO_NR(5, 2), 1);
@@ -794,10 +819,8 @@ int board_init(void)
 #ifdef CONFIG_MXC_SPI
 	setup_spi();
 #endif
-/*
-	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
+	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1); 
         setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);
-*/
 	setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info3);
 
 #ifdef CONFIG_USB_EHCI_MX6
@@ -811,6 +834,14 @@ int board_init(void)
 	return 0;
 }
 
+int power_init_board(void)
+{
+	return 0;
+}
+void ldo_mode_set(int ldo_bypass)
+{
+	return 0;
+}
 
 #ifdef CONFIG_CMD_BMODE
 static const struct boot_mode board_boot_modes[] = {
@@ -1017,39 +1048,6 @@ void ldo_mode_set(int ldo_bypass)
 #endif
 
 #ifdef CONFIG_FSL_FASTBOOT
-
-void board_fastboot_setup(void)
-{
-        switch (get_boot_device()) {
-#if defined(CONFIG_FASTBOOT_STORAGE_MMC)
-        case SD2_BOOT:
-        case MMC2_BOOT:
-            if (!getenv("fastboot_dev"))
-                        setenv("fastboot_dev", "mmc0");
-            if (!getenv("bootcmd"))
-                        setenv("bootcmd", "boota mmc0");
-            break;
-        case SD3_BOOT:
-        case MMC3_BOOT:
-            if (!getenv("fastboot_dev"))
-                        setenv("fastboot_dev", "mmc1");
-            if (!getenv("bootcmd"))
-                        setenv("bootcmd", "boota mmc1");
-            break;
-        case MMC4_BOOT:
-            if (!getenv("fastboot_dev"))
-                        setenv("fastboot_dev", "mmc2");
-            if (!getenv("bootcmd"))
-                        setenv("bootcmd", "boota mmc2");
-            break;
-#endif /*CONFIG_FASTBOOT_STORAGE_MMC*/
-        default:
-                printf("unsupported boot devices\n");
-                break;
-        }
-
-}
-
 #ifdef CONFIG_ANDROID_RECOVERY
 
 #define GPIO_VOL_DN_KEY IMX_GPIO_NR(1, 5)
@@ -1057,12 +1055,9 @@ iomux_v3_cfg_t const recovery_key_pads[] = {
 	(MX6_PAD_GPIO_5__GPIO1_IO05 | MUX_PAD_CTRL(NO_PAD_CTRL)),
 };
 
-int check_recovery_cmd_file(void)
+int is_recovery_key_pressing(void)
 {
-    int button_pressed = 0;
-    int recovery_mode = 0;
-
-    recovery_mode = recovery_check_and_clean_flag();
+	int button_pressed = 0;
 
     /* Check Recovery Combo Button press or not. */
 	imx_iomux_v3_setup_multiple_pads(recovery_key_pads,
@@ -1075,42 +1070,9 @@ int check_recovery_cmd_file(void)
 		printf("Recovery key pressed\n");
     }
 
-    return recovery_mode || button_pressed;
+	return  button_pressed;
 }
 
-void board_recovery_setup(void)
-{
-	int bootdev = get_boot_device();
-
-	switch (bootdev) {
-#if defined(CONFIG_FASTBOOT_STORAGE_MMC)
-	case SD2_BOOT:
-	case MMC2_BOOT:
-		if (!getenv("bootcmd_android_recovery"))
-			setenv("bootcmd_android_recovery",
-				"boota mmc0 recovery");
-		break;
-	case SD3_BOOT:
-	case MMC3_BOOT:
-		if (!getenv("bootcmd_android_recovery"))
-			setenv("bootcmd_android_recovery",
-				"boota mmc1 recovery");
-		break;
-	case MMC4_BOOT:
-		if (!getenv("bootcmd_android_recovery"))
-			setenv("bootcmd_android_recovery",
-				"boota mmc2 recovery");
-		break;
-#endif /*CONFIG_FASTBOOT_STORAGE_MMC*/
-	default:
-		printf("Unsupported bootup device for recovery: dev: %d\n",
-			bootdev);
-		return;
-	}
-
-	printf("setup env for recovery..\n");
-	setenv("bootcmd", "run bootcmd_android_recovery");
-}
 
 #endif /*CONFIG_ANDROID_RECOVERY*/
 
@@ -1121,124 +1083,16 @@ void board_recovery_setup(void)
 #include <spl.h>
 #include <libfdt.h>
 
-const struct mx6dq_iomux_ddr_regs mx6_ddr_ioregs = {
-	.dram_sdclk_0 =  0x00020030,
-	.dram_sdclk_1 =  0x00020030,
-	.dram_cas =  0x00020030,
-	.dram_ras =  0x00020030,
-	.dram_reset =  0x00020030,
-	.dram_sdcke0 =  0x00003000,
-	.dram_sdcke1 =  0x00003000,
-	.dram_sdba2 =  0x00000000,
-	.dram_sdodt0 =  0x00003030,
-	.dram_sdodt1 =  0x00003030,
-	.dram_sdqs0 =  0x00000030,
-	.dram_sdqs1 =  0x00000030,
-	.dram_sdqs2 =  0x00000030,
-	.dram_sdqs3 =  0x00000030,
-	.dram_sdqs4 =  0x00000030,
-	.dram_sdqs5 =  0x00000030,
-	.dram_sdqs6 =  0x00000030,
-	.dram_sdqs7 =  0x00000030,
-	.dram_dqm0 =  0x00020030,
-	.dram_dqm1 =  0x00020030,
-	.dram_dqm2 =  0x00020030,
-	.dram_dqm3 =  0x00020030,
-	.dram_dqm4 =  0x00020030,
-	.dram_dqm5 =  0x00020030,
-	.dram_dqm6 =  0x00020030,
-	.dram_dqm7 =  0x00020030,
-};
+#ifdef CONFIG_SPL_OS_BOOT
+int spl_start_uboot(void)
+{
+	gpio_request(KEY_VOL_UP, "KEY Volume UP");
+	gpio_direction_input(KEY_VOL_UP);
 
-const struct mx6dq_iomux_ddr_regs mx6dqp_ddr_ioregs = {
-	.dram_sdclk_0 =  0x00000030,
-	.dram_sdclk_1 =  0x00000030,
-	.dram_cas =  0x00000030,
-	.dram_ras =  0x00000030,
-	.dram_reset =  0x00000030,
-	.dram_sdcke0 =  0x00003000,
-	.dram_sdcke1 =  0x00003000,
-	.dram_sdba2 =  0x00000000,
-	.dram_sdodt0 =  0x00003030,
-	.dram_sdodt1 =  0x00003030,
-	.dram_sdqs0 =  0x00000030,
-	.dram_sdqs1 =  0x00000030,
-	.dram_sdqs2 =  0x00000030,
-	.dram_sdqs3 =  0x00000030,
-	.dram_sdqs4 =  0x00000030,
-	.dram_sdqs5 =  0x00000030,
-	.dram_sdqs6 =  0x00000030,
-	.dram_sdqs7 =  0x00000030,
-	.dram_dqm0 =  0x00000030,
-	.dram_dqm1 =  0x00000030,
-	.dram_dqm2 =  0x00000030,
-	.dram_dqm3 =  0x00000030,
-	.dram_dqm4 =  0x00000030,
-	.dram_dqm5 =  0x00000030,
-	.dram_dqm6 =  0x00000030,
-	.dram_dqm7 =  0x00000030,
-};
-
-const struct mx6dq_iomux_grp_regs mx6_grp_ioregs = {
-	.grp_ddr_type =  0x000C0000,
-	.grp_ddrmode_ctl =  0x00020000,
-	.grp_ddrpke =  0x00000000,
-	.grp_addds =  0x00000030,
-	.grp_ctlds =  0x00000030,
-	.grp_ddrmode =  0x00020000,
-	.grp_b0ds =  0x00000030,
-	.grp_b1ds =  0x00000030,
-	.grp_b2ds =  0x00000030,
-	.grp_b3ds =  0x00000030,
-	.grp_b4ds =  0x00000030,
-	.grp_b5ds =  0x00000030,
-	.grp_b6ds =  0x00000030,
-	.grp_b7ds =  0x00000030,
-};
-
-const struct mx6_mmdc_calibration mx6_mmcd_calib = {
-	.p0_mpwldectrl0 =  0x001F001F,
-	.p0_mpwldectrl1 =  0x001F001F,
-	.p1_mpwldectrl0 =  0x00440044,
-	.p1_mpwldectrl1 =  0x00440044,
-	.p0_mpdgctrl0 =  0x434B0350,
-	.p0_mpdgctrl1 =  0x034C0359,
-	.p1_mpdgctrl0 =  0x434B0350,
-	.p1_mpdgctrl1 =  0x03650348,
-	.p0_mprddlctl =  0x4436383B,
-	.p1_mprddlctl =  0x39393341,
-	.p0_mpwrdlctl =  0x35373933,
-	.p1_mpwrdlctl =  0x48254A36,
-};
-
-const struct mx6_mmdc_calibration mx6dqp_mmcd_calib = {
-	.p0_mpwldectrl0 =  0x001B001E,
-	.p0_mpwldectrl1 =  0x002E0029,
-	.p1_mpwldectrl0 =  0x001B002A,
-	.p1_mpwldectrl1 =  0x0019002C,
-	.p0_mpdgctrl0 =  0x43240334,
-	.p0_mpdgctrl1 =  0x0324031A,
-	.p1_mpdgctrl0 =  0x43340344,
-	.p1_mpdgctrl1 =  0x03280276,
-	.p0_mprddlctl =  0x44383A3E,
-	.p1_mprddlctl =  0x3C3C3846,
-	.p0_mpwrdlctl =  0x2E303230,
-	.p1_mpwrdlctl =  0x38283E34,
-};
-
-/* MT41K128M16JT-125 */
-static struct mx6_ddr3_cfg mem_ddr = {
-	.mem_speed = 1600,
-	.density = 2,
-	.width = 16,
-	.banks = 8,
-	.rowaddr = 14,
-	.coladdr = 10,
-	.pagesz = 2,
-	.trcd = 1375,
-	.trcmin = 4875,
-	.trasmin = 3500,
-};
+	/* Only enter in Falcon mode if KEY_VOL_UP is pressed */
+	return gpio_get_value(KEY_VOL_UP);
+}
+#endif
 
 static void ccgr_init(void)
 {
@@ -1306,6 +1160,9 @@ static void spl_dram_init(void)
 
 void board_init_f(ulong dummy)
 {
+	/* DDR initialization */
+	spl_dram_init();
+
 	/* setup AIPS and disable watchdog */
 	arch_cpu_init();
 
@@ -1320,9 +1177,6 @@ void board_init_f(ulong dummy)
 
 	/* UART clocks enabled and gd valid - init serial console */
 	preloader_console_init();
-
-	/* DDR initialization */
-	spl_dram_init();
 
 	/* Clear the BSS. */
 	memset(__bss_start, 0, __bss_end - __bss_start);

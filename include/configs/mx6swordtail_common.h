@@ -12,6 +12,7 @@
 #include "mx6_common.h"
 
 #define CONFIG_BOARD_EARLY_INIT_F
+#define CONFIG_BOARD_LATE_INIT
 #define CONFIG_IMX_THERMAL
 
 /* Size of malloc() pool */

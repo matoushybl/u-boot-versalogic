@@ -441,6 +441,13 @@
 
 };
 
+&clks {
+        assigned-clocks = <&clks IMX6QDL_CLK_LDB_DI0_SEL>,
+                          <&clks IMX6QDL_CLK_LDB_DI1_SEL>;
+        assigned-clock-parents = <&clks IMX6QDL_CLK_PLL2_PFD0_352M>,
+                                 <&clks IMX6QDL_CLK_PLL2_PFD0_352M>;
+};
+
 &can1 {
         pinctrl-names = "default";
         pinctrl-0 = <&pinctrl_flexcan1>;

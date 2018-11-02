@@ -637,7 +637,7 @@ static void setup_display(void)
 	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
 	int reg;
 
-
+        gpio_request(IMX_GPIO_NR(6, 16), "GPIO 6_16");
 	gpio_direction_output(IMX_GPIO_NR(6, 16), 1); /* LVDS power On */
 
 	/* Setup HSYNC, VSYNC, DISP_CLK for debugging purposes */
@@ -815,6 +815,10 @@ int board_init(void)
 	gpio_set_value(IMX_GPIO_NR(5, 2), 0);
 	mdelay(2);
 	gpio_set_value(IMX_GPIO_NR(5, 2), 1);
+
+#if defined(CONFIG_VIDEO_IPUV3)
+        setup_display();
+#endif
 
 #ifdef CONFIG_MXC_SPI
 	setup_spi();

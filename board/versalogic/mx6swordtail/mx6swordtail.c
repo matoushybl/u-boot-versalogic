@@ -72,7 +72,7 @@ DECLARE_GLOBAL_DATA_PTR;
 	PAD_CTL_DSE_80ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
 
 
-//#define I2C_PMIC	1
+#define I2C_PMIC	1
 
 #define I2C_PAD MUX_PAD_CTRL(I2C_PAD_CTRL)
 
@@ -626,6 +626,7 @@ iomux_v3_cfg_t const backlight_pads[] = {
 
 static void setup_iomux_backlight(void)
 {
+        gpio_request(IMX_GPIO_NR(6, 15), "GPIO 6_15");
         gpio_direction_output(IMX_GPIO_NR(6, 15), 1);
         imx_iomux_v3_setup_multiple_pads(backlight_pads,
                                          ARRAY_SIZE(backlight_pads));
@@ -838,15 +839,6 @@ int board_init(void)
 	return 0;
 }
 
-int power_init_board(void)
-{
-	return 0;
-}
-void ldo_mode_set(int ldo_bypass)
-{
-	return 0;
-}
-
 #ifdef CONFIG_CMD_BMODE
 static const struct boot_mode board_boot_modes[] = {
 	/* 4 bit bus width */
@@ -897,7 +889,7 @@ int power_init_board(void)
         unsigned int reg;
         int ret;
 
-        pfuze = pfuze_common_init(I2C_PMIC);
+        pfuze = pfuze_common_init();
         if (!pfuze)
                 return -ENODEV;
 
@@ -962,7 +954,96 @@ int power_init_board(void)
         return 0;
 }
 
+#elif defined(CONFIG_DM_PMIC_PFUZE100)
+int power_init_board(void)
+{
+        struct udevice *dev;
+        unsigned int reg;
+        int ret;
+
+        dev = pfuze_common_init();
+        if (!dev)
+                return -ENODEV;
+
+        if (is_mx6dqp())
+                ret = pfuze_mode_init(dev, APS_APS);
+        else
+                ret = pfuze_mode_init(dev, APS_PFM);
+        if (ret < 0)
+                return ret;
+
+        /* VGEN3 and VGEN5 corrected on i.mx6qp board */
+        if (!is_mx6dqp()) {
+                /* Increase VGEN3 from 2.5 to 2.8V */
+                reg = pmic_reg_read(dev, PFUZE100_VGEN3VOL);
+                reg &= ~LDO_VOL_MASK;
+                reg |= LDOB_2_80V;
+                pmic_reg_write(dev, PFUZE100_VGEN3VOL, reg);
+
+                /* Increase VGEN5 from 2.8 to 3V */
+                reg = pmic_reg_read(dev, PFUZE100_VGEN5VOL);
+                reg &= ~LDO_VOL_MASK;
+                reg |= LDOB_3_00V;
+                pmic_reg_write(dev, PFUZE100_VGEN5VOL, reg);
+        }
+
+        if (is_mx6dqp()) {
+                /* set SW1C staby volatage 1.075V*/
+                reg = pmic_reg_read(dev, PFUZE100_SW1CSTBY);
+                reg &= ~0x3f;
+                reg |= 0x1f;
+                pmic_reg_write(dev, PFUZE100_SW1CSTBY, reg);
+
+                /* set SW1C/VDDSOC step ramp up time to from 16us to 4us/25mV */
+                reg = pmic_reg_read(dev, PFUZE100_SW1CCONF);
+                reg &= ~0xc0;
+                reg |= 0x40;
+                pmic_reg_write(dev, PFUZE100_SW1CCONF, reg);
+
+                /* set SW2/VDDARM staby volatage 0.975V*/
+                reg = pmic_reg_read(dev, PFUZE100_SW2STBY);
+                reg &= ~0x3f;
+                reg |= 0x17;
+                pmic_reg_write(dev, PFUZE100_SW2STBY, reg);
+
+                /* set SW2/VDDARM step ramp up time to from 16us to 4us/25mV */
+                reg = pmic_reg_read(dev, PFUZE100_SW2CONF);
+                reg &= ~0xc0;
+                reg |= 0x40;
+                pmic_reg_write(dev, PFUZE100_SW2CONF, reg);
+        } else {
+                /* set SW1AB staby volatage 0.975V*/
+                reg = pmic_reg_read(dev, PFUZE100_SW1ABSTBY);
+                reg &= ~0x3f;
+                reg |= 0x1b;
+                pmic_reg_write(dev, PFUZE100_SW1ABSTBY, reg);
+
+                /* set SW1AB/VDDARM step ramp up time from 16us to 4us/25mV */
+                reg = pmic_reg_read(dev, PFUZE100_SW1ABCONF);
+                reg &= ~0xc0;
+                reg |= 0x40;
+                pmic_reg_write(dev, PFUZE100_SW1ABCONF, reg);
+
+                /* set SW1C staby volatage 0.975V*/
+                reg = pmic_reg_read(dev, PFUZE100_SW1CSTBY);
+                reg &= ~0x3f;
+                reg |= 0x1b;
+                pmic_reg_write(dev, PFUZE100_SW1CSTBY, reg);
+
+                /* set SW1C/VDDSOC step ramp up time to from 16us to 4us/25mV */
+                reg = pmic_reg_read(dev, PFUZE100_SW1CCONF);
+                reg &= ~0xc0;
+                reg |= 0x40;
+                pmic_reg_write(dev, PFUZE100_SW1CCONF, reg);
+        }
+
+        return 0;
+}
+#endif
+
+
 #ifdef CONFIG_LDO_BYPASS_CHECK
+#ifdef CONFIG_POWER
 void ldo_mode_set(int ldo_bypass)
 {
         unsigned int value;
@@ -1048,8 +1129,91 @@ void ldo_mode_set(int ldo_bypass)
                 printf("switch to ldo_bypass mode!\n");
         }
 }
+#elif defined(CONFIG_DM_PMIC_PFUZE100)
+void ldo_mode_set(int ldo_bypass)
+{
+        int is_400M;
+        unsigned char vddarm;
+        struct udevice *dev;
+        int ret;
+
+        ret = pmic_get("pfuze100", &dev);
+        if (ret == -ENODEV) {
+                printf("No PMIC found!\n");
+                return;
+        }
+
+        /* increase VDDARM/VDDSOC to support 1.2G chip */
+        if (check_1_2G()) {
+                ldo_bypass = 0; /* ldo_enable on 1.2G chip */
+                printf("1.2G chip, increase VDDARM_IN/VDDSOC_IN\n");
+                if (is_mx6dqp()) {
+                        /* increase VDDARM to 1.425V */
+                        pmic_clrsetbits(dev, PFUZE100_SW2VOL, 0x3f, 0x29);
+                } else {
+                        /* increase VDDARM to 1.425V */
+                        pmic_clrsetbits(dev, PFUZE100_SW1ABVOL, 0x3f, 0x2d);
+                }
+                /* increase VDDSOC to 1.425V */
+                pmic_clrsetbits(dev, PFUZE100_SW1CVOL, 0x3f, 0x2d);
+        }
+        /* switch to ldo_bypass mode , boot on 800Mhz */
+        if (ldo_bypass) {
+                prep_anatop_bypass();
+                if (is_mx6dqp()) {
+                        /* decrease VDDARM for 400Mhz DQP:1.1V*/
+                        pmic_clrsetbits(dev, PFUZE100_SW2VOL, 0x3f, 0x1c);
+                } else {
+                        /* decrease VDDARM for 400Mhz DQ:1.1V, DL:1.275V */
+                        if (is_mx6dl())
+                                pmic_clrsetbits(dev, PFUZE100_SW1ABVOL, 0x3f, 0x27);
+                        else
+                                pmic_clrsetbits(dev, PFUZE100_SW1ABVOL, 0x3f, 0x20);
+                }
+                /* increase VDDSOC to 1.3V */
+                pmic_clrsetbits(dev, PFUZE100_SW1CVOL, 0x3f, 0x28);
+
+                /*
+                 * MX6Q/DQP:
+                 * VDDARM:1.15V@800M; VDDSOC:1.175V@800M
+                 * VDDARM:0.975V@400M; VDDSOC:1.175V@400M
+                 * MX6DL:
+                 * VDDARM:1.175V@800M; VDDSOC:1.175V@800M
+                 * VDDARM:1.15V@400M; VDDSOC:1.175V@400M
+                 */
+                is_400M = set_anatop_bypass(2);
+                if (is_mx6dqp()) {
+                        if (is_400M)
+                                pmic_clrsetbits(dev, PFUZE100_SW2VOL, 0x3f, 0x17);
+                        else
+                                pmic_clrsetbits(dev, PFUZE100_SW2VOL, 0x3f, 0x1e);
+                }
+
+                if (is_400M) {
+                        if (is_mx6dl())
+				/*vddarm = 0x1f;*/ /* 1.075V */
+                                vddarm = 0x21; /* 1.125V=spec */
+                        else
+                                vddarm = 0x1b;
+                } else {
+                        if (is_mx6dl())
+                                vddarm = 0x23;
+                        else
+                                vddarm = 0x22;
+                }
+                pmic_clrsetbits(dev, PFUZE100_SW1ABVOL, 0x3f, vddarm);
+
+                /* decrease VDDSOC to 1.175V */
+                pmic_clrsetbits(dev, PFUZE100_SW1CVOL, 0x3f, 0x23);
+
+                finish_anatop_bypass();
+                printf("switch to ldo_bypass mode!\n");
+        }
+}
 #endif
+
 #endif
+
 
 #ifdef CONFIG_FSL_FASTBOOT
 #ifdef CONFIG_ANDROID_RECOVERY

@@ -834,15 +834,6 @@ int board_init(void)
 	return 0;
 }
 
-int power_init_board(void)
-{
-	return 0;
-}
-void ldo_mode_set(int ldo_bypass)
-{
-	return 0;
-}
-
 #ifdef CONFIG_CMD_BMODE
 static const struct boot_mode board_boot_modes[] = {
 	/* 4 bit bus width */

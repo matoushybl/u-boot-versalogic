@@ -926,6 +926,7 @@ int power_init_board(void)
                 reg |= 0x40;
                 pmic_reg_write(pfuze, PFUZE100_SW2CONF, reg);
         } else {
+		/* These values are used when "echo mem > /sys/power/state" command is used. */
                 /* set SW1AB staby volatage 0.975V*/
                 pmic_reg_read(pfuze, PFUZE100_SW1ABSTBY, &reg);
                 reg &= ~0x3f;
@@ -972,20 +973,6 @@ int power_init_board(void)
         if (ret < 0)
                 return ret;
 
-        /* VGEN3 and VGEN5 corrected on i.mx6qp board */
-        if (!is_mx6dqp()) {
-                /* Increase VGEN3 from 2.5 to 2.8V */
-                reg = pmic_reg_read(dev, PFUZE100_VGEN3VOL);
-                reg &= ~LDO_VOL_MASK;
-                reg |= LDOB_2_80V;
-                pmic_reg_write(dev, PFUZE100_VGEN3VOL, reg);
-
-                /* Increase VGEN5 from 2.8 to 3V */
-                reg = pmic_reg_read(dev, PFUZE100_VGEN5VOL);
-                reg &= ~LDO_VOL_MASK;
-                reg |= LDOB_3_00V;
-                pmic_reg_write(dev, PFUZE100_VGEN5VOL, reg);
-        }
 
         if (is_mx6dqp()) {
                 /* set SW1C staby volatage 1.075V*/
@@ -1012,7 +999,7 @@ int power_init_board(void)
                 reg |= 0x40;
                 pmic_reg_write(dev, PFUZE100_SW2CONF, reg);
         } else {
-                /* set SW1AB staby volatage 0.975V*/
+                /* set SW1AB standby volatage 0.975V*/
                 reg = pmic_reg_read(dev, PFUZE100_SW1ABSTBY);
                 reg &= ~0x3f;
                 reg |= 0x1b;
@@ -1024,7 +1011,7 @@ int power_init_board(void)
                 reg |= 0x40;
                 pmic_reg_write(dev, PFUZE100_SW1ABCONF, reg);
 
-                /* set SW1C staby volatage 0.975V*/
+                /* set SW1C standby volatage 0.975V*/
                 reg = pmic_reg_read(dev, PFUZE100_SW1CSTBY);
                 reg &= ~0x3f;
                 reg |= 0x1b;
@@ -1104,15 +1091,17 @@ void ldo_mode_set(int ldo_bypass)
                 if (is_400M) {
                         if (is_cpu_type(MXC_CPU_MX6DL))
                                 /*vddarm = 0x1f;*/ /* 1.075V */
-                                vddarm = 0x21; /* 1.125V=spec */
+                                /*vddarm = 0x21;*/ /* 1.125V=spec */
+				vddarm = 0x22; /* 1.150V for DualLite */
 
                         else
-                                vddarm = 0x1b;
+                                /*vddarm = 0x1b;*/ /* 0.975V */
+                                vddarm = 0x20; /* 1.100V for Quad */
                 } else {
                         if (is_cpu_type(MXC_CPU_MX6DL))
-                                vddarm = 0x23;
+                                vddarm = 0x23; /* 1.175V for DualLite */
                         else
-                                vddarm = 0x22;
+                                vddarm = 0x22; /* 1.15V for Quad */
                 }
                 pmic_reg_read(p, PFUZE100_SW1ABVOL, &value);
                 value &= ~0x3f;
@@ -1120,10 +1109,19 @@ void ldo_mode_set(int ldo_bypass)
                 pmic_reg_write(p, PFUZE100_SW1ABVOL, value);
 
                 /* decrease VDDSOC to 1.175V */
-                pmic_reg_read(p, PFUZE100_SW1CVOL, &value);
-                value &= ~0x3f;
-                value |= 0x23;
-                pmic_reg_write(p, PFUZE100_SW1CVOL, value);
+                /*pmic_reg_read(p, PFUZE100_SW1CVOL, &value);*/
+                /*value &= ~0x3f;*/
+                /*value |= 0x23;*/ /* 1.175V */
+                /*pmic_reg_write(p, PFUZE100_SW1CVOL, value);*/
+		/* decrease VDDSOC */
+                if (is_cpu_type(MXC_CPU_MX6DL)) {
+                        pmic_reg_read(p, PFUZE100_SW1CVOL, &value);
+                        value &= ~0x3f;
+                        value |= 0x23; /* 1.175V for DualLite */
+                } else {
+                        value |= 0x26;  /* 1.250V for Quad */
+                }
+		pmic_reg_write(p, PFUZE100_SW1CVOL, value);
 
                 finish_anatop_bypass();
                 printf("switch to ldo_bypass mode!\n");
@@ -1162,16 +1160,16 @@ void ldo_mode_set(int ldo_bypass)
                 prep_anatop_bypass();
                 if (is_mx6dqp()) {
                         /* decrease VDDARM for 400Mhz DQP:1.1V*/
-                        pmic_clrsetbits(dev, PFUZE100_SW2VOL, 0x3f, 0x1c);
+                        pmic_clrsetbits(dev, PFUZE100_SW2VOL, 0x3f, 0x1c); /* 0x1c would be 1.0V! */
                 } else {
                         /* decrease VDDARM for 400Mhz DQ:1.1V, DL:1.275V */
                         if (is_mx6dl())
-                                pmic_clrsetbits(dev, PFUZE100_SW1ABVOL, 0x3f, 0x27);
+                                pmic_clrsetbits(dev, PFUZE100_SW1ABVOL, 0x3f, 0x27); /* 1.275V */
                         else
-                                pmic_clrsetbits(dev, PFUZE100_SW1ABVOL, 0x3f, 0x20);
+                                pmic_clrsetbits(dev, PFUZE100_SW1ABVOL, 0x3f, 0x20); /* 1.1V */
                 }
-                /* increase VDDSOC to 1.3V */
-                pmic_clrsetbits(dev, PFUZE100_SW1CVOL, 0x3f, 0x28);
+                /* decrease VDDSOC to 1.3V */
+                pmic_clrsetbits(dev, PFUZE100_SW1CVOL, 0x3f, 0x28); /* 1.3V */
 
                 /*
                  * MX6Q/DQP:
@@ -1192,24 +1190,41 @@ void ldo_mode_set(int ldo_bypass)
                 if (is_400M) {
                         if (is_mx6dl())
 				/*vddarm = 0x1f;*/ /* 1.075V */
-                                vddarm = 0x21; /* 1.125V=spec */
+                                /*vddarm = 0x21;*/ /* 1.125V=spec (changed to this for Zebra) */
+				vddarm = 0x22; /* 1.15V for DL */
                         else
-                                vddarm = 0x1b;
+                                /*vddarm = 0x1b;*/ /* 0.975V */
+				vddarm = 0x22; /* 1.15V for Quad */
                 } else {
                         if (is_mx6dl())
-                                vddarm = 0x23;
+                                vddarm = 0x23; /* 1.175V for DL */
                         else
-                                vddarm = 0x22;
+                                vddarm = 0x23; /* 1.175V for Quad */
                 }
                 pmic_clrsetbits(dev, PFUZE100_SW1ABVOL, 0x3f, vddarm);
 
                 /* decrease VDDSOC to 1.175V */
-                pmic_clrsetbits(dev, PFUZE100_SW1CVOL, 0x3f, 0x23);
+                /*pmic_clrsetbits(dev, PFUZE100_SW1CVOL, 0x3f, 0x23);*/
+		/* replaced above with this to meet Quad spec */
+		if (is_mx6dl()) { 
+			/* decrease VDDSOC to 1.175V for DL */
+			pmic_clrsetbits(dev, PFUZE100_SW1CVOL, 0x3f, 0x23);
+		} else {
+                        /* spec says this should be 1.225V min when running VPU above 264MHz */
+			/* set VDDSOC to 1.175V to cover any speed for Quad */
+                       	pmic_clrsetbits(dev, PFUZE100_SW1CVOL, 0x3f, 0x23); 
+                }
 
                 finish_anatop_bypass();
                 printf("switch to ldo_bypass mode!\n");
         }
 }
+#else
+void ldo_mode_set(int ldo_bypass)
+{
+	return;
+}
+
 #endif
 
 #endif

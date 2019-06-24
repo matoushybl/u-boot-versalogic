@@ -46,7 +46,7 @@
 #define IMX_FEC_BASE			ENET_BASE_ADDR
 #define CONFIG_FEC_XCV_TYPE		RGMII
 #define CONFIG_ETHPRIME			"FEC"
-#define CONFIG_FEC_MXC_PHYADDR		3 /* 1 */	
+#define CONFIG_FEC_MXC_PHYADDR		3 /* 1 */
 
 #define CONFIG_PHYLIB
 /*
@@ -57,7 +57,7 @@
 
 /* Command definition */
 #define CONFIG_CMD_BMODE
- 
+
 #define CONFIG_MFG_ENV_SETTINGS \
 	"mfgtool_args=setenv bootargs console=" CONFIG_CONSOLE_DEV ",115200 " \
 		"rdinit=/linuxrc " \
@@ -296,19 +296,24 @@
 #endif
 
 /* I2C Configs */
-#define CONFIG_CMD_I2C
+#ifndef CONFIG_DM_I2C
 #define CONFIG_SYS_I2C
+#endif
+#ifdef CONFIG_CMD_I2C
 #define CONFIG_SYS_I2C_MXC
 #define CONFIG_SYS_I2C_MXC_I2C1		/* enable I2C bus 1 */
 #define CONFIG_SYS_I2C_MXC_I2C2		/* enable I2C bus 2 */
 #define CONFIG_SYS_I2C_MXC_I2C3		/* enable I2C bus 3 */
-#define CONFIG_SYS_I2C_SPEED		100000
+#define CONFIG_SYS_I2C_SPEED		  100000
+#endif
 
 /* PMIC */
+#ifndef CONFIG_DM_PMIC
 #define CONFIG_POWER
 #define CONFIG_POWER_I2C
 #define CONFIG_POWER_PFUZE100
-#define CONFIG_POWER_PFUZE100_I2C_ADDR	0x08
+#define CONFIG_POWER_PFUZE100_I2C_ADDR 0x08
+#endif
 
 /* Framebuffer */
 #define CONFIG_VIDEO

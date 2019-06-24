@@ -24,7 +24,6 @@
 #endif
 
 #define CONFIG_BOARD_EARLY_INIT_F
-
 #define CONFIG_IMX_THERMAL
 
 /* Size of malloc() pool */
@@ -34,6 +33,7 @@
 #define CONFIG_BOARD_LATE_INIT
 
 #define CONFIG_MXC_UART
+#define CONFIG_MXC_GPIO
 
 /* MMC Configs */
 #define CONFIG_SYS_FSL_ESDHC_ADDR      0
